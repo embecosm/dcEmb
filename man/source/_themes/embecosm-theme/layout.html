@@ -1,0 +1,14 @@
+{% extends "basic/layout.html" %}
+
+{% block relbar1 %}
+<div class="logo">
+  <a href="{{ pathto('index') }}">
+    <img src="{{pathto("_static/logo.png", 1) }}"
+         alt="Embecosm Logo" width="185" height="75"/></a>
+</div>
+{{ super() }}
+{% endblock %}
+
+{# put the sidebar before the body #}
+{% block sidebar1 %}{{ sidebar() }}{% endblock %}
+{% block sidebar2 %}{% endblock %}

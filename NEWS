@@ -1,0 +1,19 @@
+Embecosm DCM (dcEmb) v0.1.0 release
+# Changelog
+All notable changes to this project will be documented in this file.
+
+## [v0.1.0] - 2022-09-29
+### Added 
+- First release of code
+- Variational Laplace functionality
+- Parametric Empirical Bayes functionality
+- Bayesian Model Reduction functionality
+- Bayesian Model Averaging functionality
+- Documentation in Docutilts and Sphinx
+- COVID-19 example
+- 3-body example
+- Testing framework
+
+### Changed
+
+### Removed
