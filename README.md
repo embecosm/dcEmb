@@ -26,7 +26,9 @@ WIP
 WIP
 
 # Manual and Documentation
-Documentation is provided with doxygen and sphinx. To build the Doxygen 
+Documentation is provided with doxygen and sphinx. Online versions of
+documentation can be found [here](https://embecosm.github.io/dcEmb_docs/),
+though is currently not as nicely rendered. To build the Doxygen 
 documentation in ubuntu, run (from the root directory):
 
     doxygen /doc/Doxyfile.in
