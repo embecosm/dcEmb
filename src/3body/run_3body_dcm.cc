@@ -20,8 +20,13 @@
  * Check number of threads Eigen is operating on, then run 3body test
  */
 int main() {
-  std::cout << "OpenMP enabled with " << Eigen::nbThreads() << " cores" << '\n';
-
+#if defined(_OPENMP)
+  std::cout << "OpenMP multithreading enabled with " << Eigen::nbThreads()
+            << " cores" << '\n';
+#else
+  std::cout << "OpenMP multithreading not enabled, using " << Eigen::nbThreads()
+            << " cores" << '\n';
+#endif
   int test = run_3body_test();
   exit(2);
   return (0);

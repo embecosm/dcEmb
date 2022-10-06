@@ -34,8 +34,22 @@ Eigen::VectorXd rungekutta(std::function<Eigen::VectorXd(Eigen::VectorXd)> func,
 SparseMD permute_kron_matrix(const SparseMD& matrix,
                              const Eigen::VectorXi& new_order,
                              const Eigen::VectorXi& cur_order_size);
-int find_kron_position(const Eigen::VectorXi& idx1,
-                       const Eigen::VectorXi& sizes);
+/*
+ * Given a multidimensional matrix represented in block matrix form, give the
+ * position in the block matrix from a multidimeional matrix coordinate
+ */
+inline int find_kron_position(const Eigen::VectorXi& idx1,
+                              const Eigen::VectorXi& sizes) {
+  Eigen::VectorXi pos_vector = Eigen::VectorXi::Ones(sizes.size());
+
+  int size_iterator = 1;
+  // Calculate the values of the vectors converting position to co-ordinates
+  for (int i = 1; i < sizes.size(); i++) {
+    pos_vector(i) = sizes(i - 1) * size_iterator;
+    size_iterator = pos_vector(i);
+  }
+  return idx1.transpose() * pos_vector;
+}
 Eigen::VectorXd calculate_marginal_vector(
     const Eigen::VectorXd& ensemble_density, const Eigen::VectorXi& size_order,
     const int& index);

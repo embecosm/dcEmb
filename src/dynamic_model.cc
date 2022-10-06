@@ -17,8 +17,6 @@
 #include <iostream>
 #include <random>
 #include <vector>
-#include "feature_selection_function.hh"
-#include "generative_function.hh"
 #include "utility.hh"
 #define SparseMD Eigen::SparseMatrix<double>
 #define SparseVD Eigen::SparseVector<double>
@@ -69,9 +67,6 @@ void dynamic_model::invert_model() {
   Eigen::VectorXd likel_p_e = Eigen::VectorXd::Zero(num_parameters_eff);
   Eigen::VectorXd conditional_p_e = prior_p_e;
   double ascent_rate = -4.0;
-  Eigen::VectorXd dFdHy = Eigen::VectorXd::Zero(num_response_vars);
-  Eigen::MatrixXd dFdHyHy =
-      Eigen::MatrixXd::Zero(num_response_vars, num_response_vars);
 
   Eigen::VectorXd h_estimate = prior_h_e;
   Eigen::VectorXd p_estimate = Eigen::VectorXd::Zero(prior_p_e.size());
@@ -114,6 +109,7 @@ void dynamic_model::invert_model() {
       i_cov_comp =
           Eigen::MatrixXd::Zero(num_response_total, num_response_total);
       for (int l = 0; l < num_precision_comp; l++) {
+      
         i_cov_comp =
             i_cov_comp + (precision_comp[l] * (exp(-32) + exp(h_estimate(l))));
       }
@@ -157,8 +153,8 @@ void dynamic_model::invert_model() {
       dFdhh = dFdhh - inv_prior_h_c;
       conditional_h_cov = utility::inverse_tol(-dFdhh);
       Eigen::VectorXd dh = utility::dx(dFdhh, dFdh, ascent_rate);
-      dh = dh.unaryExpr(
-          [](double x) { return std::min(std::max(x, -1.0), 1.0); });
+      dh = (dh.unaryExpr(
+          [](double x) { return std::min(std::max(x, -1.0), 1.0); })).eval();
       h_estimate = h_estimate + dh;
       double dFh = dFdh.transpose() * dh;
 

@@ -12,11 +12,12 @@
  */
 
 #include <Eigen/Dense>
+#include <Eigen/Sparse>
 #include <vector>
 #include "dynamic_model.hh"
-#include "feature_selection_COVID.hh"
-#include "generative_COVID.hh"
 #include "parameter_location_COVID.hh"
+#define SparseMD Eigen::SparseMatrix<double>
+#define SparseVD Eigen::SparseVector<double>
 #pragma once
 
 /**
@@ -24,14 +25,6 @@
  */
 class dynamic_COVID_model : public dynamic_model {
  public:
-  /**
-   * @brief object used to evaluate the generative model
-   */
-  generative_COVID gen_function;
-  /**
-   * @brief object used to evaluate feature selection
-   */
-  feature_selection_COVID fs_function;
   /**
    * @brief parameter locations for COVID-19
    */
@@ -43,6 +36,31 @@ class dynamic_COVID_model : public dynamic_model {
       const parameter_location_COVID& parameter_locations,
       const int& timeseries_length,
       const Eigen::VectorXi& select_response_vars);
+  Eigen::MatrixXd eval_features(Eigen::MatrixXd response_vars);
+  SparseMD eval_transition_probability_matrix(
+      const Eigen::VectorXd& parameters_exp,
+      const Eigen::VectorXd& ensemble_density);
+  SparseMD calc_location_transition_matrix(
+      const Eigen::VectorXd& parameter_exp,
+      const Eigen::VectorXd& ensemble_density);
+  SparseMD calc_infection_transition_matrix(
+      const Eigen::VectorXd& parameter_exp,
+      const Eigen::VectorXd& ensemble_density);
+  SparseMD calc_clinical_transition_matrix(
+      const Eigen::VectorXd& parameter_exp);
+  SparseMD calc_testing_transition_matrix(
+      const Eigen::VectorXd& parameter_exp,
+      const Eigen::VectorXd& ensemble_density);
+  Eigen::MatrixXd eval_generative(
+      const Eigen::VectorXd& parameters,
+      const parameter_location_COVID& parameter_locations,
+      const int& timeseries_length);
+  Eigen::MatrixXd eval_generative(
+      const Eigen::VectorXd& parameters,
+      const parameter_location_COVID& parameter_locations,
+      const int& timeseries_length,
+      const Eigen::VectorXi& select_response_vars);
+
   dynamic_COVID_model();
 };
 
@@ -51,9 +69,7 @@ class dynamic_COVID_model : public dynamic_model {
  */
 inline bool operator==(const dynamic_COVID_model& lhs,
                        const dynamic_COVID_model& rhs) {
-  return lhs.gen_function == rhs.gen_function &
-         lhs.fs_function == rhs.fs_function &
-         lhs.parameter_locations == rhs.parameter_locations &
+  return lhs.parameter_locations == rhs.parameter_locations &
          lhs.max_invert_it == rhs.max_invert_it &
          lhs.conditional_parameter_expectations ==
              rhs.conditional_parameter_expectations &

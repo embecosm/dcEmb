@@ -33,7 +33,7 @@
  */
 int run_COVID_test() {
   bool OCTAVE_INVERSIONS = 0;
-  int num_countries = 5;
+  int num_countries = 1;
   std::vector<dynamic_COVID_model> GCM;
   std::vector<country_data> countries = read_country_data(num_countries);
 
@@ -59,20 +59,9 @@ int run_COVID_test() {
         COVID_model.select_response_vars = select_response_vars;
         COVID_model.num_response_vars = 2;
         COVID_model.response_vars = response_vars;
-        feature_selection_COVID COVID_fs;
-        COVID_model.fs_function = COVID_fs;
-        generative_COVID COVID_gen;
-        COVID_model.gen_function = COVID_gen;
-        COVID_model.max_invert_it = 128;
+        COVID_model.max_invert_it = 10;
         COVID_model.invert_model();
-        utility::print_matrix(country.name + "_Ep",
-                              COVID_model.conditional_parameter_expectations);
-        utility::print_matrix(country.name + "_Cp",
-                              COVID_model.conditional_parameter_covariances);
-        utility::print_matrix(country.name + "_Eh",
-                              COVID_model.conditional_hyper_expectations);
-        std::cout << "country: " << country.name << '\n';
-        std::cout << "free_energy: " << COVID_model.free_energy << '\n';
+
         if (STORE) {
           {
             std::ofstream outfile("DCM_COVID_" + country.name);
@@ -97,6 +86,8 @@ int run_COVID_test() {
   } else {
     GCM = generate_comparison_data(countries);
   }
+
+  return 0;
 
   // Set up 3rd level design matricies
 
@@ -323,10 +314,6 @@ std::vector<dynamic_COVID_model> generate_comparison_data(
     COVID_model.select_response_vars = select_response_vars;
     COVID_model.num_response_vars = 2;
     COVID_model.response_vars = response_vars;
-    feature_selection_COVID COVID_fs;
-    COVID_model.fs_function = COVID_fs;
-    generative_COVID COVID_gen;
-    COVID_model.gen_function = COVID_gen;
     COVID_model.max_invert_it = 128;
     switch (i) {
       case (0):
@@ -368,10 +355,10 @@ void generate_us_posteriors(dynamic_COVID_model& model) {
 void generate_brazil_posteriors(dynamic_COVID_model& model) {
   model.conditional_parameter_expectations =
       utility::read_matrix<Eigen::MatrixXd>(
-          "../src/data/brazil_conditional_parameter_expectations.csv");
+          "../src/data/Brazil_conditional_parameter_expectations.csv");
   model.conditional_parameter_covariances =
       utility::read_matrix<Eigen::MatrixXd>(
-          "../src/data/brazil_conditional_parameter_covariances.csv");
+          "../src/data/Brazil_conditional_parameter_covariances.csv");
   model.free_energy = -9205.455950138792;
 }
 
@@ -381,10 +368,10 @@ void generate_brazil_posteriors(dynamic_COVID_model& model) {
 void generate_india_posteriors(dynamic_COVID_model& model) {
   model.conditional_parameter_expectations =
       utility::read_matrix<Eigen::MatrixXd>(
-          "../src/data/india_conditional_parameter_expectations.csv");
+          "../src/data/India_conditional_parameter_expectations.csv");
   model.conditional_parameter_covariances =
       utility::read_matrix<Eigen::MatrixXd>(
-          "../src/data/india_conditional_parameter_covariances.csv");
+          "../src/data/India_conditional_parameter_covariances.csv");
   model.free_energy = -10481.23075593396;
 }
 
@@ -394,10 +381,10 @@ void generate_india_posteriors(dynamic_COVID_model& model) {
 void generate_russia_posteriors(dynamic_COVID_model& model) {
   model.conditional_parameter_expectations =
       utility::read_matrix<Eigen::MatrixXd>(
-          "../src/data/russia_conditional_parameter_expectations.csv");
+          "../src/data/Russia_conditional_parameter_expectations.csv");
   model.conditional_parameter_covariances =
       utility::read_matrix<Eigen::MatrixXd>(
-          "../src/data/russia_conditional_parameter_covariances.csv");
+          "../src/data/Russia_conditional_parameter_covariances.csv");
   model.free_energy = -8396.914141674371;
 }
 
@@ -407,10 +394,10 @@ void generate_russia_posteriors(dynamic_COVID_model& model) {
 void generate_mexico_posteriors(dynamic_COVID_model& model) {
   model.conditional_parameter_expectations =
       utility::read_matrix<Eigen::MatrixXd>(
-          "../src/data/mexico_conditional_parameter_expectations.csv");
+          "../src/data/Mexico_conditional_parameter_expectations.csv");
   model.conditional_parameter_covariances =
       utility::read_matrix<Eigen::MatrixXd>(
-          "../src/data/mexico_conditional_parameter_covariances.csv");
+          "../src/data/Mexico_conditional_parameter_covariances.csv");
   model.free_energy = -7379.296952775237;
 }
 

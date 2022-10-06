@@ -12,6 +12,7 @@
  */
 
 #include "utility.hh"
+#include <omp.h>
 #include <bitset>
 #include <functional>
 #include <iostream>
@@ -80,10 +81,14 @@ Eigen::MatrixXd utility::diff(
   Eigen::VectorXd base = func(vars);
   Eigen::MatrixXd out_matrix = Eigen::MatrixXd::Zero(base.size(), vars.size());
   double dx = exp(-8.0);
-  for (int i = 0; i < vars.size(); i++) {
-    Eigen::VectorXd vars_tmp = vars + (transform.col(i) * dx);
-    Eigen::VectorXd modified = func(vars_tmp);
-    out_matrix.col(i) = (modified - base) / dx;
+#pragma omp parallel
+  {
+#pragma omp for schedule(dynamic) nowait
+    for (int i = 0; i < vars.size(); i++) {
+      Eigen::VectorXd vars_tmp = vars + (transform.col(i) * dx);
+      Eigen::VectorXd modified = func(vars_tmp);
+      out_matrix.col(i) = (modified - base) / dx;
+    }
   }
   return out_matrix;
 }
@@ -127,7 +132,7 @@ SparseMD utility::permute_kron_matrix(const SparseMD& matrix,
   }
 
   // Calculate the new positions with the changed dimensions
-  Eigen::VectorXi perm_vector = Eigen::VectorXi::Zero(cur_order_size.prod());
+  Eigen::VectorXi perm_vector = Eigen::VectorXi(cur_order_size.prod());
   for (int i = 0; i < cur_order_size.prod(); i++) {
     Eigen::VectorXi nums = Eigen::VectorXi::Zero(cur_order_size.size());
     int size_iterator2 = i;
@@ -152,24 +157,8 @@ SparseMD utility::permute_kron_matrix(const SparseMD& matrix,
       matrix2.insert(perm_vector(it.row()), perm_vector(it.col())) = it.value();
     }
   }
+
   return matrix2;
-}
-
-/*
- * Given a multidimensional matrix represented in block matrix form, give the
- * position in the block matrix from a multidimeional matrix coordinate
- */
-int utility::find_kron_position(const Eigen::VectorXi& idx1,
-                                const Eigen::VectorXi& sizes) {
-  Eigen::VectorXi pos_vector = Eigen::VectorXi::Ones(sizes.size());
-
-  int size_iterator = 1;
-  // Calculate the values of the vectors converting position to co-ordinates
-  for (int i = 1; i < sizes.size(); i++) {
-    pos_vector(i) = sizes(i - 1) * size_iterator;
-    size_iterator = pos_vector(i);
-  }
-  return idx1.transpose() * pos_vector;
 }
 
 /*

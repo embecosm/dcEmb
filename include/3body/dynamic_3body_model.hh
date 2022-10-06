@@ -13,8 +13,6 @@
 
 #include <vector>
 #include "dynamic_model.hh"
-#include "feature_selection_3body.hh"
-#include "generative_3body.hh"
 #include "parameter_location_3body.hh"
 #pragma once
 
@@ -23,14 +21,6 @@
  */
 class dynamic_3body_model : public dynamic_model {
  public:
-  /**
-   * @brief object used to evaluate the generative model
-   */
-  generative_3body gen_function;
-  /**
-   * @brief object used to evaluate feature selection
-   */
-  feature_selection_3body fs_function;
   /**
    * @brief parameter locations for COVID-19
    */
@@ -42,14 +32,22 @@ class dynamic_3body_model : public dynamic_model {
       const parameter_location_3body& parameter_locations,
       const int& timeseries_length,
       const Eigen::VectorXi& select_response_vars);
+  Eigen::MatrixXd eval_generative(
+      const Eigen::VectorXd& parameters,
+      const parameter_location_3body& parameter_locations,
+      const int& timeseries_length);
+  Eigen::MatrixXd eval_generative(
+      const Eigen::VectorXd& parameters,
+      const parameter_location_3body& parameter_locations,
+      const int& timeseries_length,
+      const Eigen::VectorXi& select_response_vars);
+  Eigen::VectorXd differential_eq(const Eigen::VectorXd& state);
   dynamic_3body_model();
 };
 
 inline bool operator==(const dynamic_3body_model& lhs,
                        const dynamic_3body_model& rhs) {
-  return lhs.gen_function == rhs.gen_function &
-         lhs.fs_function == rhs.fs_function &
-         lhs.parameter_locations == rhs.parameter_locations &
+  return lhs.parameter_locations == rhs.parameter_locations &
          lhs.max_invert_it == rhs.max_invert_it &
          lhs.conditional_parameter_expectations ==
              rhs.conditional_parameter_expectations &

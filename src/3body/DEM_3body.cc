@@ -33,32 +33,28 @@ int run_3body_test() {
   model.parameter_locations = default_parameter_locations();
   model.num_samples = 1000;
   model.num_response_vars = 3;
-  feature_selection_3body fs;
-  model.fs_function = fs;
-  generative_3body gen;
-  model.gen_function = gen;
-  gen.eval_generative(true_prior_expectations(), model.parameter_locations,
-                      model.num_samples);
-  utility::print_matrix("../visualisation/true_generative.csv",
-                        gen.get_output());
+
+  Eigen::MatrixXd out1 = model.eval_generative(
+      true_prior_expectations(), model.parameter_locations, model.num_samples);
+  utility::print_matrix("../visualisation/true_generative.csv", out1);
   Eigen::MatrixXd response_vars =
       Eigen::MatrixXd::Zero(model.num_samples, model.num_response_vars);
   Eigen::VectorXi select_response_vars =
       Eigen::VectorXi::Zero(model.num_response_vars);
   select_response_vars << 1, 2, 3;
-  response_vars = gen.get_output_column(select_response_vars);
+  response_vars = out1(Eigen::all, select_response_vars);
   model.select_response_vars = select_response_vars;
   model.response_vars = response_vars;
 
   model.invert_model();
-  gen.eval_generative(model.conditional_parameter_expectations,
-                      model.parameter_locations, model.num_samples);
-  utility::print_matrix("../visualisation/deriv_generative.csv",
-                        gen.get_output());
-  gen.eval_generative(default_prior_expectations(), model.parameter_locations,
-                      model.num_samples);
-  utility::print_matrix("../visualisation/org_generative.csv",
-                        gen.get_output());
+  Eigen::MatrixXd out2 =
+      model.eval_generative(model.conditional_parameter_expectations,
+                            model.parameter_locations, model.num_samples);
+  utility::print_matrix("../visualisation/deriv_generative.csv", out2);
+  Eigen::MatrixXd out3 =
+      model.eval_generative(default_prior_expectations(),
+                            model.parameter_locations, model.num_samples);
+  utility::print_matrix("../visualisation/org_generative.csv", out3);
   return 0;
 }
 

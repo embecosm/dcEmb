@@ -36,22 +36,19 @@ TEST(serialization, 3body) {
   model.parameter_locations = default_3body_parameter_locations();
   model.num_samples = 1000;
   model.num_response_vars = 3;
-  feature_selection_3body fs;
-  model.fs_function = fs;
-  generative_3body gen;
-  model.gen_function = gen;
-  gen.eval_generative(true_3body_prior_expectations(),
-                      model.parameter_locations, model.num_samples);
-  Eigen::MatrixXd true_output = gen.get_output();
+
+  Eigen::MatrixXd true_output =
+      model.eval_generative(true_3body_prior_expectations(),
+                            model.parameter_locations, model.num_samples);
   Eigen::MatrixXd response_vars =
       Eigen::MatrixXd::Zero(model.num_samples, model.num_response_vars);
   Eigen::VectorXi select_response_vars =
       Eigen::VectorXi::Zero(model.num_response_vars);
   select_response_vars << 1, 2, 3;
-  response_vars = gen.get_output_column(select_response_vars);
+  response_vars = true_output(Eigen::all, select_response_vars);
   model.select_response_vars = select_response_vars;
   model.response_vars = response_vars;
-  model.max_invert_it = 2;
+
   model.invert_model();
 
   // Make sure oarchive is destroyed before iarchive is instantiated
@@ -92,10 +89,6 @@ TEST(serialization, COVID) {
     COVID_model.select_response_vars = select_response_vars;
     COVID_model.num_response_vars = 2;
     COVID_model.response_vars = response_vars;
-    feature_selection_COVID COVID_fs;
-    COVID_model.fs_function = COVID_fs;
-    generative_COVID COVID_gen;
-    COVID_model.gen_function = COVID_gen;
     COVID_model.max_invert_it = 2;
     COVID_model.invert_model();
     GCM.push_back(COVID_model);

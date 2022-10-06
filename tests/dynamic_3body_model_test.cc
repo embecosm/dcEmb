@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "3body/dynamic_3body_model.hh"
+#include "dynamic_3body_model.hh"
 #include <gtest/gtest.h>
 #include <stdio.h>
 #include <Eigen/Dense>
@@ -28,26 +28,22 @@ TEST(dynamic_3body_model_test, system) {
   model.parameter_locations = default_parameter_locations();
   model.num_samples = 1000;
   model.num_response_vars = 3;
-  feature_selection_3body fs;
-  model.fs_function = fs;
-  generative_3body gen;
-  model.gen_function = gen;
-  gen.eval_generative(true_prior_expectations(), model.parameter_locations,
-                      model.num_samples);
-  Eigen::MatrixXd true_output = gen.get_output();
+
+  Eigen::MatrixXd true_output = model.eval_generative(
+      true_prior_expectations(), model.parameter_locations, model.num_samples);
   Eigen::MatrixXd response_vars =
       Eigen::MatrixXd::Zero(model.num_samples, model.num_response_vars);
   Eigen::VectorXi select_response_vars =
       Eigen::VectorXi::Zero(model.num_response_vars);
   select_response_vars << 1, 2, 3;
-  response_vars = gen.get_output_column(select_response_vars);
+  response_vars = true_output(Eigen::all, select_response_vars);
   model.select_response_vars = select_response_vars;
   model.response_vars = response_vars;
 
   model.invert_model();
-  gen.eval_generative(model.conditional_parameter_expectations,
-                      model.parameter_locations, model.num_samples);
-  Eigen::MatrixXd deriv_output = gen.get_output();
+  Eigen::MatrixXd deriv_output =
+      model.eval_generative(model.conditional_parameter_expectations,
+                            model.parameter_locations, model.num_samples);
 
   Eigen::MatrixXd diff_mat = true_output - deriv_output;
   // Accept test if mean absolute error is < 1.5%

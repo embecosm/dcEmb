@@ -17,10 +17,6 @@
 #include "dynamic_3body_model.hh"
 #include "dynamic_COVID_model.hh"
 #include "dynamic_model.hh"
-#include "feature_selection_3body.hh"
-#include "feature_selection_COVID.hh"
-#include "generative_3body.hh"
-#include "generative_COVID.hh"
 #include "parameter_location_3body.hh"
 #include "parameter_location_COVID.hh"
 #include "peb_model.hh"
@@ -32,8 +28,6 @@ namespace cereal {
 template <class Archive>
 void serialize(Archive& ar, dynamic_COVID_model& dCm,
                const unsigned int version) {
-  ar& dCm.gen_function;
-  ar& dCm.fs_function;
   ar& dCm.parameter_locations;
   ar& dCm.max_invert_it;
   ar& dCm.conditional_parameter_expectations;
@@ -78,25 +72,6 @@ void serialize(Archive& ar, peb_model<dynamic_COVID_model>& peb,
 }
 
 template <class Archive>
-void serialize(Archive& ar, generative_COVID& gCm, const unsigned int version) {
-  ar& gCm.output;
-  ar& gCm.marginal_location;
-  ar& gCm.marginal_infection;
-  ar& gCm.marginal_clinical;
-  ar& gCm.marginal_testing;
-  ar& gCm.parameters;
-  ar& gCm.parameter_locations;
-  ar& gCm.timeseries_length;
-}
-
-template <class Archive>
-void serialize(Archive& ar, feature_selection_COVID& fsCm,
-               const unsigned int version) {
-  ar& fsCm.fs_response_vars;
-  ar& fsCm.response_vars;
-}
-
-template <class Archive>
 void serialize(Archive& ar, parameter_location_COVID& pCm,
                const unsigned int version) {
   ar& pCm.init_cases;
@@ -133,8 +108,6 @@ void serialize(Archive& ar, parameter_location_COVID& pCm,
 template <class Archive>
 void serialize(Archive& ar, dynamic_3body_model& d3m,
                const unsigned int version) {
-  ar& d3m.gen_function;
-  ar& d3m.fs_function;
   ar& d3m.parameter_locations;
   ar& d3m.max_invert_it;
   ar& d3m.conditional_parameter_expectations;
@@ -149,21 +122,6 @@ void serialize(Archive& ar, dynamic_3body_model& d3m,
   ar& d3m.num_response_vars;
   ar& d3m.select_response_vars;
   ar& d3m.response_vars;
-}
-
-template <class Archive>
-void serialize(Archive& ar, generative_3body& g3m, const unsigned int version) {
-  ar& g3m.output;
-  ar& g3m.parameters;
-  ar& g3m.parameter_locations;
-  ar& g3m.timeseries_length;
-}
-
-template <class Archive>
-void serialize(Archive& ar, feature_selection_3body& fs3m,
-               const unsigned int version) {
-  ar& fs3m.fs_response_vars;
-  ar& fs3m.response_vars;
 }
 
 template <class Archive>

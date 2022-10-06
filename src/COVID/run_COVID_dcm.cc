@@ -20,8 +20,14 @@
  * Check number of threads Eigen is operating on, then run COVID test
  */
 int main() {
-  std::cout << "OpenMP enabled with " << Eigen::nbThreads() << " cores" << '\n';
-
+  Eigen::initParallel();
+#if defined(_OPENMP)
+  std::cout << "OpenMP multithreading enabled with " << Eigen::nbThreads()
+            << " cores" << '\n';
+#else
+  std::cout << "OpenMP multithreading not enabled, using " << Eigen::nbThreads()
+            << " cores" << '\n';
+#endif
   int COVID_test = run_COVID_test();
   return (0);
 }
