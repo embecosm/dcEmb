@@ -161,6 +161,54 @@ SparseMD utility::permute_kron_matrix(const SparseMD& matrix,
   return matrix2;
 }
 
+SparseMD utility::calc_permuted_kron_identity_product(
+    const int& id_size, const SparseMD& matrix,
+    const Eigen::VectorXi& new_order, const Eigen::VectorXi& cur_order_size) {
+  Eigen::VectorXi pos_vector = Eigen::VectorXi::Ones(cur_order_size.size());
+  Eigen::VectorXi pos_vector_new = Eigen::VectorXi::Ones(cur_order_size.size());
+  int size_iterator = 1;
+  int size_iterator_new = 1;
+  Eigen::VectorXi new_order_size = cur_order_size(new_order);
+  // Calculate the values of the vectors converting position to co-ordinates
+  for (int i = 1; i < cur_order_size.size(); i++) {
+    pos_vector(i) = cur_order_size(i - 1) * size_iterator;
+    pos_vector_new(i) = new_order_size(i - 1) * size_iterator_new;
+    size_iterator = pos_vector(i);
+    size_iterator_new = pos_vector_new(i);
+  }
+
+  // Calculate the new positions with the changed dimensions
+  Eigen::VectorXi perm_vector = Eigen::VectorXi(cur_order_size.prod());
+  for (int i = 0; i < cur_order_size.prod(); i++) {
+    Eigen::VectorXi nums = Eigen::VectorXi::Zero(cur_order_size.size());
+    int size_iterator2 = i;
+    for (int j = cur_order_size.size() - 1; j > 0; j--) {
+      nums(j) = size_iterator2 / pos_vector(j);
+      size_iterator2 = size_iterator2 % pos_vector(j);
+    }
+    nums(0) = size_iterator2;
+
+    perm_vector(i) = nums(new_order).transpose() * pos_vector_new;
+  }
+
+  // Reorder the elements in the matrix
+  // NB: Test carefully any changes to this.
+  SparseMD out(cur_order_size.prod(), cur_order_size.prod());
+  // Since we are only permuting transition matricies, we have a pretty good
+  // idea of how populated they are, reserve in advance to improve performance
+  out.reserve(Eigen::VectorXi::Constant(cur_order_size.prod(), 3));
+
+  for (int i = 0; i < id_size; i++) {
+    for (int j = 0; j < matrix.outerSize(); j++) {
+      for (SparseMD::InnerIterator it(matrix, j); it; ++it) {
+        out.insert(perm_vector(i * matrix.rows() + it.row()),
+                   perm_vector(i * matrix.cols() + it.col())) = it.value();
+      }
+    }
+  }
+  return out;
+}
+
 /*
  * Given a block vector corresponding to an ensemble density, calculate the
  * marginal for the given index

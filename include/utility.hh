@@ -34,6 +34,10 @@ Eigen::VectorXd rungekutta(std::function<Eigen::VectorXd(Eigen::VectorXd)> func,
 SparseMD permute_kron_matrix(const SparseMD& matrix,
                              const Eigen::VectorXi& new_order,
                              const Eigen::VectorXi& cur_order_size);
+
+SparseMD calc_permuted_kron_identity_product(
+    const int& id_size, const SparseMD& matrix, const Eigen::VectorXi& new_order,
+    const Eigen::VectorXi& cur_order_size);
 /*
  * Given a multidimensional matrix represented in block matrix form, give the
  * position in the block matrix from a multidimeional matrix coordinate

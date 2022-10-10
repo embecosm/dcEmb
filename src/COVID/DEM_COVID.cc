@@ -59,7 +59,7 @@ int run_COVID_test() {
         COVID_model.select_response_vars = select_response_vars;
         COVID_model.num_response_vars = 2;
         COVID_model.response_vars = response_vars;
-        COVID_model.max_invert_it = 10;
+        COVID_model.max_invert_it = 128;
         COVID_model.invert_model();
 
         if (STORE) {

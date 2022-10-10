@@ -30,13 +30,6 @@ TEST(dynamic_COVID_model_test, system) {
   std::vector<country_data> countries = read_country_data(num_countries);
 
   for (int i = 0; i < num_countries; i++) {
-    std::cout << countries.at(i).name << '\n';
-    utility::read_matrix<Eigen::MatrixXd>(
-            "../src/data/" + countries.at(i).name +
-            "_conditional_parameter_expectations.csv");
-  }
-
-  for (int i = 0; i < num_countries; i++) {
     country_data country = countries.at(i);
     Eigen::MatrixXd response_vars =
         Eigen::MatrixXd::Zero(country.cases.size(), 2);

@@ -255,13 +255,13 @@ SparseMD dynamic_COVID_model::calc_location_transition_matrix(
       ZERO(5, 5), ZERO(5, 5), ZERO(5, 5), ZERO(5, 5), loc_ards, ZERO(5, 5),
       ZERO(5, 5), ZERO(5, 5), ZERO(5, 5), loc_dec;
 
-  SparseMD loc_full = kroneckerProduct(
-      (Eigen::MatrixXd::Identity(20, 20)).sparseView(), loc_tmp.sparseView());
   Eigen::VectorXi new_order = Eigen::VectorXi::Zero(4);
   new_order << 0, 2, 1, 3;
   Eigen::VectorXi sizes = Eigen::VectorXi::Zero(4);
   sizes << 5, 4, 5, 4;
-  loc_full = utility::permute_kron_matrix(loc_full, new_order, sizes);
+
+  SparseMD loc_full = utility::calc_permuted_kron_identity_product(
+      20, loc_tmp.sparseView(), new_order, sizes);
 
   // Change sizes to reflect new order
   sizes << 5, 5, 4, 4;
@@ -373,15 +373,14 @@ SparseMD dynamic_COVID_model::calc_infection_transition_matrix(
       ZERO(5, 5), inf_remo, ZERO(5, 5), ZERO(5, 5), ZERO(5, 5), ZERO(5, 5),
       ZERO(5, 5), inf_iso;
 
-  SparseMD inf_full = kroneckerProduct(
-      (Eigen::MatrixXd::Identity(16, 16)).sparseView(), inf_tmp.sparseView());
-
   Eigen::VectorXi new_order = Eigen::VectorXi::Zero(4);
   new_order << 1, 0, 2, 3;
 
   Eigen::VectorXi sizes = Eigen::VectorXi::Zero(4);
   sizes << 5, 5, 4, 4;
-  inf_full = utility::permute_kron_matrix(inf_full, new_order, sizes);
+
+  SparseMD inf_full = utility::calc_permuted_kron_identity_product(
+      16, inf_tmp.sparseView(), new_order, sizes);
 
   return inf_full;
 }
@@ -419,15 +418,13 @@ SparseMD dynamic_COVID_model::calc_clinical_transition_matrix(
       ZERO(4, 4), cli_abp, ZERO(4, 4), ZERO(4, 4), ZERO(4, 4), ZERO(4, 4),
       ZERO(4, 4), cli_abn;
 
-  SparseMD cli_full =
-      kroneckerProduct((Eigen::MatrixXd::Identity(20, 20)).sparseView(),
-                       cli_tmp.sparseView())
-          .eval();
   Eigen::VectorXi new_order = Eigen::VectorXi::Zero(4);
   new_order << 2, 1, 0, 3;
   Eigen::VectorXi sizes = Eigen::VectorXi::Zero(4);
   sizes << 4, 5, 5, 4;
-  cli_full = utility::permute_kron_matrix(cli_full, new_order, sizes);
+
+  SparseMD cli_full = utility::calc_permuted_kron_identity_product(
+      20, cli_tmp.sparseView(), new_order, sizes);
   // Change sizes to reflect new order
   sizes << 5, 5, 4, 4;
   Eigen::VectorXi r_pos = Eigen::VectorXi::Zero(4);
@@ -505,14 +502,13 @@ SparseMD dynamic_COVID_model::calc_testing_transition_matrix(
       ZERO(4, 4), test_abp, ZERO(4, 4), ZERO(4, 4), ZERO(4, 4), ZERO(4, 4),
       ZERO(4, 4), test_abn;
 
-  SparseMD test_full = kroneckerProduct(
-      (Eigen::MatrixXd::Identity(20, 20)).sparseView(), test_tmp.sparseView());
-
   Eigen::VectorXi new_order = Eigen::VectorXi::Zero(4);
   new_order << 2, 1, 3, 0;
   Eigen::VectorXi sizes = Eigen::VectorXi::Zero(4);
   sizes << 4, 5, 5, 4;
-  test_full = utility::permute_kron_matrix(test_full, new_order, sizes);
+
+  SparseMD test_full = utility::calc_permuted_kron_identity_product(
+      20, test_tmp.sparseView(), new_order, sizes);
 
   sizes << 5, 5, 4, 4;
   Eigen::VectorXi r_pos = Eigen::VectorXi::Zero(4);

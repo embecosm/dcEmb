@@ -166,6 +166,33 @@ TEST(utility_test, permute_matrix) {
   EXPECT_EQ(new_joint_density, res);
 }
 
+TEST(utility_test, calc_permuted_kron_identity_product) {
+  Eigen::VectorXd vec0(2);
+  vec0 << 1, 2;
+  Eigen::VectorXd vec1(2);
+  vec1 << 3, 4;
+  Eigen::VectorXd vec2(3);
+  vec2 << 5, 6, 7;
+  Eigen::MatrixXd mat0 = kroneckerProduct(vec0, vec0.transpose());
+  Eigen::MatrixXd mat1 = kroneckerProduct(vec1, vec1.transpose());
+  Eigen::MatrixXd mat2 = kroneckerProduct(vec2, vec2.transpose());
+
+  Eigen::VectorXi new_order(5);
+  new_order << 0, 2, 1, 3, 4;
+  Eigen::VectorXi sizes(5);
+  sizes << 3, 2, 2, 5, 4;
+  Eigen::MatrixXd joint_density =
+      kroneckerProduct(mat2, kroneckerProduct(mat1, mat0)).eval();
+  Eigen::MatrixXd new_joint_density =
+      kroneckerProduct(Eigen::MatrixXd::Identity(20, 20), joint_density);
+
+  Eigen::MatrixXd out1 = utility::permute_kron_matrix(
+      new_joint_density.sparseView(), new_order, sizes);
+  Eigen::MatrixXd out2 = utility::calc_permuted_kron_identity_product(
+      20, joint_density.sparseView(), new_order, sizes);
+  EXPECT_EQ(out1, out2);
+}
+
 TEST(utility_test, find_kron_position) {
   Eigen::VectorXd vec0(4);
   vec0 << 1, 2, 3, 4;
