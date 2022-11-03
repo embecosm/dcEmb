@@ -6,36 +6,13 @@ by Embecosm.
 - Cmake
 - C++ 14 compatible compiler
 
-# Build Instructions
-
-## Ubuntu
-1. Clone the repository
-
-2. Initialise git submodules (git submodule update --init)
-
-3. Create and navigate into a build directory (mkdir build && cd build)
-
-4. Run CMake (cmake .. && cmake --build .)
-
-5. Run the executable of your choice (e.g, ./dcm_3body)
-
-## Windows
-WIP
-
-## Mac
-WIP
-
-# Manual and Documentation
-Documentation is provided with doxygen and sphinx. Online versions of
+# Documentation
+This codebase is documented with Doxygen and Sphinx. Online versions of
 documentation can be found [here](https://embecosm.github.io/dcEmb_docs/),
-though is currently not as nicely rendered. To build the Doxygen 
-documentation in ubuntu, run (from the root directory):
+and also come attached to the repository. 
 
-    doxygen /doc/Doxyfile.in
-
-To build the Sphinx manual, run (from the root directory):
-
-    sphinx-build -b html man/source man/build
+# Getting Started
+See the online manual [here](https://embecosm.github.io/dcEmb_docs/).
 
 # Changelog
 A log of changes made to the code can be found in markdown format in the NEWS

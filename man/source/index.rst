@@ -15,8 +15,9 @@
 dcEmb
 =================================
 
-This is the documentation for the dcEmb repository, Embecosm's high performance
-implementation of Dynamic Causal Modelling in C++.
+This is the documentation for the `dcEmb <https://github.com/embecosm/dcEmb>`_ 
+repository, Embecosm's high performance implementation of Dynamic Causal 
+Modelling in C++.
 
 Early Release Warning
 #####################

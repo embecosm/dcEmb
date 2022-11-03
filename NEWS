@@ -2,7 +2,7 @@ Embecosm DCM (dcEmb) v0.1.0 release
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [v0.1.1] - 2022-10-06
+## [v0.2.0] - 2022-10-06
 - Significantly simplified class structure
 - Significantly improved OpenMP multithreading 
 - Several optimisations to the COVID model
