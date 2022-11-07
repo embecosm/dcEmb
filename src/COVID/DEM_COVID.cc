@@ -33,7 +33,7 @@
  */
 int run_COVID_test() {
   bool OCTAVE_INVERSIONS = 0;
-  int num_countries = 1;
+  int num_countries = 5;
   std::vector<dynamic_COVID_model> GCM;
   std::vector<country_data> countries = read_country_data(num_countries);
 
@@ -87,7 +87,6 @@ int run_COVID_test() {
     GCM = generate_comparison_data(countries);
   }
 
-  return 0;
 
   // Set up 3rd level design matricies
 

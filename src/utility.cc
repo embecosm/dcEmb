@@ -83,7 +83,7 @@ Eigen::MatrixXd utility::diff(
   double dx = exp(-8.0);
 #pragma omp parallel
   {
-#pragma omp for schedule(dynamic) nowait
+#pragma omp for schedule(static)
     for (int i = 0; i < vars.size(); i++) {
       Eigen::VectorXd vars_tmp = vars + (transform.col(i) * dx);
       Eigen::VectorXd modified = func(vars_tmp);
@@ -206,6 +206,7 @@ SparseMD utility::calc_permuted_kron_identity_product(
       }
     }
   }
+  // out.makeCompressed();
   return out;
 }
 

@@ -275,10 +275,10 @@ TEST(utility_test, softmax) {
     EXPECT_DOUBLE_EQ(utility::softmax(vec1)(i), sol1(i));
   }
   for (int i = 0; i < 10; i++) {
-    EXPECT_THROW(utility::softmax(vec2)(i), std::runtime_error);
+    EXPECT_DOUBLE_EQ(utility::softmax(vec2)(i), sol2(i));
   }
   for (int i = 0; i < 10; i++) {
-    EXPECT_THROW(utility::softmax(vec3)(i), std::runtime_error);
+    EXPECT_DOUBLE_EQ(utility::softmax(vec3)(i), sol3(i));
   }
 }
 

@@ -81,12 +81,14 @@ double sigma(const double& x, const double& thresh);
  */
 template <typename Derived, typename T = typename Derived::Scalar>
 Derived softmax(const Eigen::MatrixBase<Derived>& mat) {
-  T exp_mat_sum = mat.array().exp().sum();
+  T max = mat.maxCoeff();
+  Derived mat_norm = mat.unaryExpr([max](T x) { return (x - max); });
+  T exp_mat_sum = mat_norm.array().exp().sum();
   if (exp_mat_sum == INFINITY) {
     throw std::runtime_error("vector values too large");
     return Derived::Zero(1);
   }
-  return mat.unaryExpr([exp_mat_sum](T x) { return (exp(x) / exp_mat_sum); });
+  return mat_norm.unaryExpr([exp_mat_sum](T x) { return (exp(x) / exp_mat_sum); });
 }
 
 /**

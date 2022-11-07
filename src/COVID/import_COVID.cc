@@ -33,8 +33,8 @@ std::vector<country_data> read_country_data(int num_countries) {
   std::vector<country_data> countries;
   std::ifstream cases_file;
   std::ifstream deaths_file;
-  cases_file.open("../src/data/time_series_covid19_confirmed_global.csv");
-  deaths_file.open("../src/data/time_series_covid19_deaths_global.csv");
+  cases_file.open("../src/data/time_series_covid19_confirmed_global_new.csv");
+  deaths_file.open("../src/data/time_series_covid19_deaths_global_new.csv");
 
   std::string cases_line;
   std::string deaths_line;

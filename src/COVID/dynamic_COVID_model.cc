@@ -202,8 +202,9 @@ SparseMD dynamic_COVID_model::eval_transition_probability_matrix(
   SparseMD test_transition_matrix =
       calc_testing_transition_matrix(parameter_exp, ensemble_density);
 
-  SparseMD transition_matrix = loc_transition_matrix * inf_transition_matrix *
-                               cli_transition_matrix * test_transition_matrix;
+  SparseMD transition_matrix = (loc_transition_matrix * inf_transition_matrix *
+                                cli_transition_matrix * test_transition_matrix)
+                                   .pruned();
   return transition_matrix;
 }
 

@@ -91,9 +91,6 @@ class bma_model {
     Eigen::VectorXd posterior_model_prob_tmp = this->posterior_model_prob;
     double max_post_prob = posterior_model_prob_tmp.maxCoeff();
 
-    // std::vector<Eigen::MatrixXd> model_posterior_eval_c_e(num_models);
-    // std::vector<Eigen::MatrixXd> model_posterior_evec_c_e(num_models);
-
     Eigen::MatrixXd posterior_p_e_tmp =
         Eigen::MatrixXd(num_parameters, num_samples);
     for (int i = 0; i < num_samples; i++) {
@@ -115,6 +112,7 @@ class bma_model {
 
       posterior_p_e_tmp.col(i) = tmp;
     }
+
     this->posterior_p_e = posterior_p_e_tmp.rowwise().mean();
     this->posterior_p_c = Eigen::VectorXd(num_parameters);
     for (int i = 0; i < num_parameters; i++) {

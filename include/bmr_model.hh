@@ -87,7 +87,11 @@ class bmr_model {
     Eigen::MatrixXd singular_vec = svd.matrixU();
 
     Eigen::VectorXd prior_p_e =
-        singular_vec.transpose() * DCM_in.prior_parameter_expectations;
+        singular_vec.transpose() *
+        DCM_in.prior_parameter_expectations.reshaped(
+            DCM_in.prior_parameter_expectations.rows() *
+                DCM_in.prior_parameter_expectations.cols(),
+            1);
     Eigen::MatrixXd prior_p_c = singular_vec.transpose() *
                                 DCM_in.prior_parameter_covariances *
                                 singular_vec;
@@ -194,7 +198,7 @@ class bmr_model {
         }
         int nK = K.rows();
         free_energy_vec2 = Eigen::VectorXd::Zero(nK);
-        for (int i = 0; i < K.rows(); i++) {
+        for (int i = 0; i < nK; i++) {
           Eigen::VectorXi r = accum_reduction_vec;
           for (int k = 0; k < K.cols(); k++) {
             if (K(i, k)) {
@@ -227,14 +231,13 @@ class bmr_model {
             (nparams > nmax)) {
           break;
         } else {
-          // std::cout << "test_free_energy" << free_energy_vec2 << '\n';
           nmax = 8;
         }
       }
       sm_free_energy_vec2 = utility::softmax(free_energy_vec2);
 
       int best_free_energy;
-      sm_free_energy_vec2.maxCoeff(&best_free_energy);
+      free_energy_vec2.maxCoeff(&best_free_energy);
       for (int i = 0; i < K.cols(); i++) {
         if (K(best_free_energy, i) == 1) {
           accum_reduction_vec(params(i)) = 0;
@@ -257,16 +260,33 @@ class bmr_model {
     }
     Eigen::VectorXd mean_params2 = mean_params1.row(0) / mean_params1.sum();
     Eigen::VectorXd posterior_p_p_e = accum_reduction_vec.cast<double>();
+
     posterior_p_p_e(params) = mean_params2;
 
-    double free_energy_max = free_energy_vec2.maxCoeff();
+    int max_pos;
+    double free_energy_max = free_energy_vec2.maxCoeff(&max_pos) + 16.0;
+    free_energy_vec2(max_pos) = free_energy_vec2(max_pos) + 16.0;
 
-    (this->BMA).posterior_p_e_all = std::vector<Eigen::MatrixXd>(K.rows());
-    (this->BMA).posterior_p_c_all = std::vector<Eigen::MatrixXd>(K.rows());
-    (this->BMA).free_energy_all = Eigen::VectorXd(K.rows());
+    (this->BMA).posterior_p_e_all = std::vector<Eigen::MatrixXd>();
+    (this->BMA).posterior_p_c_all = std::vector<Eigen::MatrixXd>();
+    std::vector<double> free_energy_tmp = std::vector<double>();
 
     Eigen::VectorXd prior_r_p_e;
     Eigen::MatrixXd prior_r_p_c;
+
+    Eigen::VectorXd posterior_p_e_full =
+        DCM_in.conditional_parameter_expectations.reshaped(
+            DCM_in.conditional_parameter_expectations.rows() *
+                DCM_in.conditional_parameter_expectations.cols(),
+            1);
+
+    Eigen::VectorXd prior_p_e_full =
+        DCM_in.prior_parameter_expectations.reshaped(
+            DCM_in.prior_parameter_expectations.rows() *
+                DCM_in.prior_parameter_expectations.cols(),
+            1);
+
+    // Use original values, not "null space reduced" ones
     for (int i = 0; i < K.rows(); i++) {
       if (free_energy_vec2[i] > (free_energy_max - 8.0)) {
         Eigen::VectorXi r = accum_reduction_vec;
@@ -278,25 +298,26 @@ class bmr_model {
         Eigen::VectorXi s = r.unaryExpr([](int x) { return (1 - x); });
         Eigen::MatrixXd red_c_tmp1 = Eigen::MatrixXd::Zero(r.size(), r.size());
         red_c_tmp1.diagonal() = (r.cast<double>() + s.cast<double>() * gamma);
-        Eigen::MatrixXd red_c_tmp2 =
-            singular_vec.transpose() * red_c_tmp1 * singular_vec;
-        prior_r_p_c = red_c_tmp2 * prior_p_c * red_c_tmp2;
+        prior_r_p_c =
+            red_c_tmp1 * DCM_in.prior_parameter_covariances * red_c_tmp1;
         Eigen::MatrixXd red_e_tmp1 = Eigen::MatrixXd::Zero(r.size(), r.size());
         red_e_tmp1.diagonal() = r.cast<double>();
-        Eigen::MatrixXd red_e_tmp2 =
-            singular_vec.transpose() * red_e_tmp1 * singular_vec;
-        prior_r_p_e = red_c_tmp2 * prior_p_e +
+        prior_r_p_e = red_c_tmp1 * DCM_in.prior_parameter_expectations +
                       singular_vec.transpose() * s.cast<double>() * beta;
-        std::vector<Eigen::MatrixXd> log_evidence =
-            utility::reduced_log_evidence(posterior_p_e, posterior_p_c,
-                                          prior_p_e, prior_p_c, prior_r_p_e,
-                                          prior_r_p_c);
 
-        (this->BMA).free_energy_all(i) = log_evidence.at(0).value();
-        (this->BMA).posterior_p_e_all.at(i) = log_evidence.at(1);
-        (this->BMA).posterior_p_c_all.at(i) = log_evidence.at(2);
+        std::vector<Eigen::MatrixXd> log_evidence =
+            utility::reduced_log_evidence(
+                posterior_p_e_full, DCM_in.conditional_parameter_covariances,
+                prior_p_e_full, DCM_in.prior_parameter_covariances, prior_r_p_e,
+                prior_r_p_c);
+
+        free_energy_tmp.push_back(log_evidence.at(0).value());
+        (this->BMA).posterior_p_e_all.push_back(log_evidence.at(1));
+        (this->BMA).posterior_p_c_all.push_back(log_evidence.at(2));
       }
     }
+    (this->BMA).free_energy_all = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(
+        free_energy_tmp.data(), free_energy_tmp.size());
     this->BMA.average_ffx();
 
     this->free_energy_vector = free_energy_vec2;
