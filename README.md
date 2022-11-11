@@ -11,6 +11,10 @@ This codebase is documented with Doxygen and Sphinx. Online versions of
 documentation can be found [here](https://embecosm.github.io/dcEmb_docs/),
 and also come attached to the repository. 
 
+To build sphinx documentation:
+1) sphinx-build -b html man/source man/build
+2) doxygen doc/Doxyfile.in
+
 # Getting Started
 See the online manual [here](https://embecosm.github.io/dcEmb_docs/).
 

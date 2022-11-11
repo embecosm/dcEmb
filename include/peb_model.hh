@@ -137,7 +137,9 @@ class peb_model : public dynamic_model {
                               this->GCM.at(i).conditional_parameter_covariances(
                                   this->random_effects, this->random_effects) *
                               singular_vec;
-      c_p_c = (c_p_c.inverse() + (p_p_c.inverse() / 16)).inverse();
+
+      c_p_c = utility::inverse_tol(utility::inverse_tol(c_p_c) +
+                                   (utility::inverse_tol(p_p_c) / 16));
       perDCM_prior_p_e.push_back(p_p_e);
       perDCM_prior_p_c.push_back(p_p_c);
       perDCM_posterior_p_e.push_back(c_p_e);
@@ -153,7 +155,7 @@ class peb_model : public dynamic_model {
 
     Eigen::MatrixXd prior_p_q =
         singular_vec.transpose() * prior_p_c * singular_vec;
-    prior_p_q = prior_p_q.inverse();
+    prior_p_q = utility::inverse_tol(prior_p_q);
 
     Eigen::VectorXd kron_b_e =
         Eigen::MatrixXd::Identity(num_between_effects, num_between_effects)
@@ -169,13 +171,13 @@ class peb_model : public dynamic_model {
         kroneckerProduct(kron_b_e, singular_vec.transpose() * tmp_prior_b_e);
     Eigen::MatrixXd prior_b_c = kroneckerProduct(
         kron_b_c, (singular_vec.transpose() * tmp_prior_b_c * singular_vec));
-    Eigen::MatrixXd prior_b_q = prior_b_c.inverse();
+    Eigen::MatrixXd prior_b_q = utility::inverse_tol(prior_b_c);
 
     Eigen::VectorXd prior_g_e = Eigen::MatrixXd(1, 1);
     prior_g_e << 0;
     Eigen::MatrixXd prior_g_c = Eigen::MatrixXd(1, 1);
     prior_g_c << 1.0 / 16;
-    Eigen::MatrixXd prior_g_q = prior_g_c.inverse();
+    Eigen::MatrixXd prior_g_q = utility::inverse_tol(prior_g_c);
     Eigen::MatrixXd prior_bg_q =
         Eigen::MatrixXd::Zero(prior_b_q.rows() + prior_g_q.rows(),
                               prior_b_q.cols() + prior_g_q.cols());
@@ -205,7 +207,7 @@ class peb_model : public dynamic_model {
     Eigen::MatrixXd current_dFdgg;
     double t = -4;
     double dF = 0;
-    double Fc;
+    double Fc = 0;
     for (int i = 0; i < this->max_invert_it; i++) {
       if (num_precision_comps > 0) {
         prior_r_p_q = prior_p_q * exp(-8);
@@ -213,7 +215,7 @@ class peb_model : public dynamic_model {
           prior_r_p_q += exp(g_estimate(j)) * prior_p_q;
         }
       }
-      prior_r_p_c = prior_r_p_q.inverse();
+      prior_r_p_c = utility::inverse_tol(prior_r_p_q);
 
       double free_energy_tmp = 0;
 
@@ -298,8 +300,7 @@ class peb_model : public dynamic_model {
 
       double Fb = b_estimate.transpose() * prior_b_q * b_estimate;
       double Fg = g_estimate.transpose() * prior_g_q * g_estimate;
-      utility::print_matrix("prior_bg_q", prior_bg_q);
-      Fc = Fb / 2 + Fg / 2 + utility::logdet(prior_bg_q * posterior_p_c) / 2;
+      Fc = Fb / 2 + Fg / 2 - utility::logdet(prior_bg_q * posterior_p_c) / 2;
 
       free_energy_tmp = free_energy_tmp - Fc;
 
@@ -330,7 +331,18 @@ class peb_model : public dynamic_model {
       }
 
       Eigen::VectorXd dp = utility::dx(dFdpp, dFdp, t);
-      utility::print_matrix("dp", dp);
+
+      if (dp.norm() >= 8) {
+        dFdpp = Eigen::MatrixXd::Zero(dFdbb.rows() + dFdgg.rows(),
+                                      dFdbb.cols() + dFdgg.cols());
+        dFdpp(Eigen::seq(0, dFdbb.rows() - 1),
+              Eigen::seq(0, dFdbb.cols() - 1)) = dFdbb;
+        dFdpp(Eigen::seq(dFdbb.rows(), dFdbb.rows() + dFdgg.rows() - 1),
+              Eigen::seq(dFdbb.cols(), dFdbb.cols() + dFdgg.cols() - 1)) =
+            dFdgg;
+        dp = utility::dx(dFdpp, dFdp, t);
+      }
+
       Eigen::VectorXd db = dp(Eigen::seq(0, b_estimate.size() - 1));
       Eigen::VectorXd dg = dp(Eigen::seq(
           b_estimate.size(), b_estimate.size() + g_estimate.size() - 1));
@@ -351,6 +363,9 @@ class peb_model : public dynamic_model {
       prior_e_p_c = utility::inverse_tol(prior_e_p_c);
 
       Eigen::VectorXd prior_e_p_e = GCM.at(i).prior_parameter_expectations;
+      //   std::cout << "perDCM_prior_r_p_e[i]" << perDCM_prior_r_p_e[i] <<
+      //   '\n'; std::cout << "GCM.at(i).prior_parameter_expectations"
+      //             << GCM.at(i).prior_parameter_expectations << '\n';
       prior_e_p_e(this->random_effects) = singular_vec * perDCM_prior_r_p_e[i];
 
       Eigen::MatrixXd tmp_prior_p_c =

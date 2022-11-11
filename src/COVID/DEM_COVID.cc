@@ -32,7 +32,7 @@
  * Run the COVID example
  */
 int run_COVID_test() {
-  bool OCTAVE_INVERSIONS = 0;
+  bool OCTAVE_INVERSIONS = 1;
   int num_countries = 5;
   std::vector<dynamic_COVID_model> GCM;
   std::vector<country_data> countries = read_country_data(num_countries);
@@ -125,16 +125,16 @@ int run_COVID_test() {
   PEB.max_invert_it = 64;
   PEB.invert_model();
 
+  std::cout << "PEB.prior_parameter_expectations" << PEB.prior_parameter_expectations << '\n';
+  std::cout << "PEB.posterior_parameter_expectations" << PEB.conditional_parameter_expectations << '\n';
   generate_PEB_values(PEB);
+  std::cout << "PEB.prior_parameter_expectations" << PEB.prior_parameter_expectations << '\n';
+  std::cout << "PEB.posterior_parameter_expectations" << PEB.conditional_parameter_expectations << '\n';
 
   bmr_model<peb_model<dynamic_COVID_model>> BMR;
   BMR.DCM_in = PEB;
   BMR.reduce();
   bma_model<peb_model<dynamic_COVID_model>> BMA = BMR.BMA;
-  utility::print_matrix("BMR.free_energy_vector", BMR.free_energy_vector);
-  utility::print_matrix("BMR.posterior_probability_vector",
-                        BMR.posterior_probability_vector);
-  utility::print_matrix("BMR.model_space", BMR.model_space);
 
   std::vector<dynamic_COVID_model> GCM_empirical = PEB.empirical_GCM;
   for (int i = 0; i < GCM_empirical.size(); i++) {
@@ -341,10 +341,10 @@ std::vector<dynamic_COVID_model> generate_comparison_data(
 void generate_us_posteriors(dynamic_COVID_model& model) {
   model.conditional_parameter_expectations =
       utility::read_matrix<Eigen::MatrixXd>(
-          "../src/data/US_conditional_parameter_expectations.csv");
+          "../src/data/US_posterior_p_e.csv");
   model.conditional_parameter_covariances =
       utility::read_matrix<Eigen::MatrixXd>(
-          "../src/data/US_conditional_parameter_covariances.csv");
+          "../src/data/US_posterior_p_c.csv");
   model.free_energy = -11263.38592908148;
 }
 
@@ -354,10 +354,10 @@ void generate_us_posteriors(dynamic_COVID_model& model) {
 void generate_brazil_posteriors(dynamic_COVID_model& model) {
   model.conditional_parameter_expectations =
       utility::read_matrix<Eigen::MatrixXd>(
-          "../src/data/Brazil_conditional_parameter_expectations.csv");
+          "../src/data/Brazil_posterior_p_e.csv");
   model.conditional_parameter_covariances =
       utility::read_matrix<Eigen::MatrixXd>(
-          "../src/data/Brazil_conditional_parameter_covariances.csv");
+          "../src/data/Brazil_posterior_p_c.csv");
   model.free_energy = -9205.455950138792;
 }
 
@@ -367,10 +367,10 @@ void generate_brazil_posteriors(dynamic_COVID_model& model) {
 void generate_india_posteriors(dynamic_COVID_model& model) {
   model.conditional_parameter_expectations =
       utility::read_matrix<Eigen::MatrixXd>(
-          "../src/data/India_conditional_parameter_expectations.csv");
+          "../src/data/India_posterior_p_e.csv");
   model.conditional_parameter_covariances =
       utility::read_matrix<Eigen::MatrixXd>(
-          "../src/data/India_conditional_parameter_covariances.csv");
+          "../src/data/India_posterior_p_c.csv");
   model.free_energy = -10481.23075593396;
 }
 
@@ -380,10 +380,10 @@ void generate_india_posteriors(dynamic_COVID_model& model) {
 void generate_russia_posteriors(dynamic_COVID_model& model) {
   model.conditional_parameter_expectations =
       utility::read_matrix<Eigen::MatrixXd>(
-          "../src/data/Russia_conditional_parameter_expectations.csv");
+          "../src/data/Russia_posterior_p_e.csv");
   model.conditional_parameter_covariances =
       utility::read_matrix<Eigen::MatrixXd>(
-          "../src/data/Russia_conditional_parameter_covariances.csv");
+          "../src/data/Russia_posterior_p_c.csv");
   model.free_energy = -8396.914141674371;
 }
 
@@ -393,10 +393,10 @@ void generate_russia_posteriors(dynamic_COVID_model& model) {
 void generate_mexico_posteriors(dynamic_COVID_model& model) {
   model.conditional_parameter_expectations =
       utility::read_matrix<Eigen::MatrixXd>(
-          "../src/data/Mexico_conditional_parameter_expectations.csv");
+          "../src/data/Mexico_posterior_p_e.csv");
   model.conditional_parameter_covariances =
       utility::read_matrix<Eigen::MatrixXd>(
-          "../src/data/Mexico_conditional_parameter_covariances.csv");
+          "../src/data/Mexico_posterior_p_c.csv");
   model.free_energy = -7379.296952775237;
 }
 
@@ -405,13 +405,13 @@ void generate_mexico_posteriors(dynamic_COVID_model& model) {
  */
 void generate_PEB_values(peb_model<dynamic_COVID_model>& model) {
   model.prior_parameter_expectations = utility::read_matrix<Eigen::MatrixXd>(
-      "../src/data/peb_prior_parameter_expectations.csv");
+      "../src/data/peb_prior_p_e.csv");
   model.prior_parameter_covariances = utility::read_matrix<Eigen::MatrixXd>(
-      "../src/data/peb_prior_parameter_covariances.csv");
+      "../src/data/peb_prior_p_c.csv");
   model.conditional_parameter_expectations =
       utility::read_matrix<Eigen::MatrixXd>(
-          "../src/data/peb_conditional_parameter_expectations.csv");
+          "../src/data/peb_posterior_p_e.csv");
   model.conditional_parameter_covariances =
       utility::read_matrix<Eigen::MatrixXd>(
-          "../src/data/peb_conditional_parameter_covariances.csv");
+          "../src/data/peb_posterior_p_c.csv");
 }

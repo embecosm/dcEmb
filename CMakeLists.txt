@@ -9,6 +9,8 @@
 
 cmake_minimum_required(VERSION 3.16)
 
+project(dcm_demo LANGUAGES CXX)
+
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}-std=c++14 -O3 -flto -march=native\
  -D_GLIBCXX_PARALLEL -DNDEBUG")
 SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}-O3")
@@ -17,7 +19,7 @@ SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}-O3")
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-project(dcm_demo LANGUAGES CXX)
+find_package(OpenMP)
 
 SET(EIGEN)
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/googletest)
@@ -78,8 +80,6 @@ set(SOURCES_SERIALIZATION_TESTS
     src/utility.cc
     tests/serialization_test.cc
 )
-
-find_package(OpenMP)
 
 add_executable(dcm_covid ${SOURCES_COVID})
 if(OpenMP_FOUND)

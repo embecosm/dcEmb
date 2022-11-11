@@ -56,7 +56,7 @@ TEST(dynamic_COVID_model_test, system) {
     Eigen::MatrixXd out2 = COVID_model.eval_generative(
         utility::read_matrix<Eigen::MatrixXd>(
             "../src/data/" + country.name +
-            "_conditional_parameter_expectations.csv"),
+            "_posterior_p_e.csv"),
         COVID_model.parameter_locations, COVID_model.num_samples,
         COVID_model.select_response_vars);
 

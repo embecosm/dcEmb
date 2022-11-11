@@ -33,8 +33,8 @@ std::vector<country_data> read_country_data(int num_countries) {
   std::vector<country_data> countries;
   std::ifstream cases_file;
   std::ifstream deaths_file;
-  cases_file.open("../src/data/time_series_covid19_confirmed_global_new.csv");
-  deaths_file.open("../src/data/time_series_covid19_deaths_global_new.csv");
+  cases_file.open("../src/data/time_series_covid19_confirmed_global.csv");
+  deaths_file.open("../src/data/time_series_covid19_deaths_global.csv");
 
   std::string cases_line;
   std::string deaths_line;
@@ -52,8 +52,12 @@ std::vector<country_data> read_country_data(int num_countries) {
     splitstr(cases_split_tmp, cases_line, ',');
     splitstr(deaths_split_tmp, deaths_line, ',');
     int first_case = 4;
+    // First case is when cases are > 1 for parity with DCM for COVID example
+    // Should probably be >= 1
+    int cumsum = 0;
     for (int i = 4; i < cases_split_tmp.size(); i++) {
-      if (cases_split_tmp[i].compare("0")) {
+      cumsum += stoi(cases_split_tmp[i]);
+      if (cumsum > 1) {
         first_case = i;
         break;
       }
