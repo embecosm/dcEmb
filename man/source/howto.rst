@@ -15,15 +15,15 @@ Overview
 Creating your model
 +++++++++++++++++++
 
-The dcEmb Dynamic Causal Model library provides support for creating arbtitary
-DCM models through *inheritance*. The core idea is that the 
+The dcEmb Dynamic Causal Model library provides support for creating arbitary
+DCM models through inheritance. The core idea is that the 
 only things you should need to write for your own application are:
 
 1. Your forward (generative) model, and 
 
 2. Estimates of parameter/hyperparameter distributions. 
 
-In short, to write your own DCM you simply need to create a new class that 
+To write your own DCM you simply need to create a new class that 
 inherits from the dynamic_model class. The Dynamic Model class contains two 
 virtual methods that you will be forced to overwrite. This are:
 
@@ -75,8 +75,8 @@ Advanced functions
 
 There are several functions, for example Bayesian Model Reduction (BMR), or
 Parametric Empirical Bayes (PEB) which are called on dynamic causal models 
-themselves.These functions have been made generic and should be able to be 
-called over anyDCM-like class through the use of `templating <https://cplusplus
+themselves. These functions have been made generic and should be able to be 
+called over any DCM-like class through the use of `templating <https://cplusplus
 .com/doc/oldtutorial/templates/>`_. For example, to create a PEB class in the 
 COVID example, we do:
 
@@ -86,8 +86,8 @@ Some of these classes may require additional parameters to be specified before
 they can be run. PEB, for example will require a matrix specifying random 
 effects, as well as a between-subject design matrix.
 
-This section of the documentation still needs a good worked example. We suggest
-anyone interseted in persuing this further references the 
+A worked example for these functions is still a work in progress. We suggest
+anyone interested in pursuing this further references the 
 `documentation <https://embecosm.github.io/dcEmb_docs/Doxygen/index.html>`_
 for these functions.
 
@@ -99,22 +99,22 @@ creating our three body problem DCM example.
 
 The goal of this example is to use the DCM method to recover a known set of 
 results from a physical system. The system in question is the three body 
-problem, the problem of finding the trajectories of three planetery bodies in
+problem, the problem of finding the trajectories of three planetary bodies in
 space. There exist several known stable orbits for the three body problem, 
 which are periodic. In this example, we will take one of these stable solutions
 (a "figure of 8" orbit), and the positions, masses and velocities of *one* of
-the planets in this orbit, and use the DCM method to recover the positions,
-masses and velocities of the other two. 
+the planets in this orbit, and use the DCM method to (hopefully accurately) 
+estimate the positions, masses and velocities of the other two. 
 
 Creating the base model
 +++++++++++++++++++++++
 
-In this section, we walk through creating a new DCM, and placing the three
-body problems forward model inside it
+In this section, we walk through creating a new DCM, and placing an appropriate
+three body problem forward model inside it.
 
-Chronologically, the first thing we need to do is, following the instructions
-above, create a new class that inherits from the dynamic_model class. To do this
-we will create a new folder in the *include* subdirectory of the project, called
+Chronologically, the first thing we need to do following the instructions
+above, is to create a new class that inherits from the dynamic_model class. To do this
+we create a new folder in the *include* subdirectory of the project, called
 "3body", and inside this create a new file called "dynamic_3body_model.hh", 
 with the following content:
 
@@ -129,7 +129,7 @@ with the following content:
       dynamic_3body_model(); // Class Constructor
     };
 
-Continuing to tollow the above instructions, we also need to populate this class
+Continuing to follow the above instructions, we also need to populate this class
 with at least the following functions: :code:`get_observed_outcomes()` and 
 :code:`get_forward_model_function()`.
 
@@ -147,16 +147,14 @@ with at least the following functions: :code:`get_observed_outcomes()` and
       dynamic_3body_model();  // Class Constructor
     };
 
-The above code realises the class definition for dynamic_3body_model. Our next
-logical step is to go away and create the implementations of the functions we
-have just defined. To do this, in both cases, we need to go away and think about
-what the form of the forward model function that we are going to create will
-take.
+The above code realizes the class definition for dynamic_3body_model. We now 
+need to go away and create the implementations of these functions we
+have just defined.
 
 In this case, our forward model will take the initial state of our three planets
 (positions, masses, and velocities) and produce a time series of the state over
 a given period. We can do this by using newtons law of gravitation to create
-equations of motion dictacting the planets movements over time 
+equations of motion dictating the planets movements over time 
 (see `here <https://evgenii.com/blog/three-body-problem-simulator/>`_ for a
 simple walkthrough). These equations of motion lack an analytical solution, so
 we solve them using numerical methods. We suggest using the runge-kutta method, 
@@ -166,7 +164,7 @@ Putting this together speaks to the creation of two functions, an "equation of
 motion" function evaluating the rate of change of the state, given the current
 state, and a main "generative model" function that iteratively applies the
 runge-kutta method to this to produce a time series. In the current version of
-the code, we also implement an explicit :code:`forward model()` function that
+the code, we also implement a :code:`forward model()` function that
 explicitly wraps the entire forward model. We should implement these functions
 as member functions of our dynamic_3body_model class. To do this, we will 
 first need to change our dynamic_3body_model.hh header file to include
@@ -200,7 +198,7 @@ definitions for three new functions :code:`eval_generative()`,
     };
 
 As well as the :code:`parameters()` and :code:`timeseries_length()` parameters,
-which we use in our function defninitions for the parameters our generative
+which we use in our function definitions for the parameters our generative
 model will use, and the length of the timeseries it produces, we also pass it
 :code:`select_response_vars()`. This is a variable that we will use later
 in order to match up our generative models outputs to our training data.
@@ -349,7 +347,7 @@ which simply returns all columns.
 :code:`eval_generative()` Repeatedly calls our equations of motion for the
 3body problem, using the runge-kutta method to produce updates for each
 timestep. This implementation envisages that while the state is input as a
-vector (as is required by the functions that call it), said vector can be
+vector, said vector can be
 converted to a matrix in which each column corresponds to a planet. We'll
 discuss a sensible strategy for creating such a vector further down.
 
@@ -402,7 +400,11 @@ discuss a sensible strategy for creating such a vector further down.
 
 :code:`differential_eq()` Implements the equations of motion. Given a state
 (positions, masses and velocities of each of the three planets), describes
-the rate of change of that state.  
+the rate of change of that state.
+
+With all these pieces in place, we have implemented our dynamic_3body_model
+class, and populated it with a forward model that will produce the trajectories
+of 3 bodies in space. We now move on to how to test this. 
 
 Testing the Forward Model
 +++++++++++++++++++++++++
@@ -417,7 +419,7 @@ creates a new dynamic_3body_model object and calls it's generative model
 function, and a main function (so that we can run out C++ program) .
 Following the convention that the main function should easily found, we suggest
 placing the main function in it's own file (*src/3body/run_3body_dcm.cc*), and
-the code implementing our forward model test in a seperate file 
+the code implementing our forward model test in a separate file 
 (*src/3body/DEM_3body.cc*). For the DEM_3body file, we will also need a header
 file (*include/3body/DEM_3body.hh*). For run_dcm_3body, as long as the only 
 function it contains is main, we  will not.
@@ -438,7 +440,7 @@ sufficient:
     }
 
 :code:`run_3body_test()` will be a function we define in DEM_3body for running
-our forward moodel test.
+our forward model test.
 
 Creating the files for our demo functions will requires us to at least define
 the :code:`run_3body_test()` function . We also suggest defining a 
@@ -507,16 +509,16 @@ in a file. Our :code:`true_prior_expectations()` will look like:
 
 Our strategy here is to define each row to be a parameter, and each column to
 be a planet. This makes our earlier generative function very easy to write.
-Unfortunately, since we need to pass parameters in a vector, we will need to
-vectorize the resulting matrix, then unvectorize it when we wish to use it. #
+Unfortunately, since we need to pass parameters in a vector in, we will need to
+vectorize the resulting matrix, then unvectorize it when we wish to use it.
 
 To compile the code, you can either build the code on the command line or
 (we suggest) piggyback on the CMake system we use to build the other examples.
 To avoid duplicating effort, we won't rediscuss this here, but simply link to
-the LINK RELEVANT SECTION.
+the :ref:`relevant section <building_worked>`.
 
 You can visualize these with the visualise_3body.py script in the visualization
-subdirectlry (note: WIP - script is not user friendly) or your favourite
+subdirectlry (note: WIP - script is not user friendly) or your favorite
 graphing software.
 
 Inverting a model
@@ -654,7 +656,7 @@ Running this code should result in the creation of three files:
 * *org_generative.csv*, the state over time, based on the mean of the
   prior estimates of parameters
 
-Visualising this code, either with *visualisation/visualise_3body.py*, or 
+Visualizing this code, either with *visualisation/visualise_3body.py*, or 
 your tool of choice, you should observe that the posterior estimates and 
 true solution are almost identical, while the prior estimates quickly degenerate
 into chaos. 

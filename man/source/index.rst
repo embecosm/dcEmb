@@ -34,8 +34,8 @@ example of how to implement your own model.
 
 Documentation
 #############
-Our documentation is maintained with Doxygen. See the :ref:`documentation
-<doxygen>` section. 
+Our documentation is maintained with Doxygen and Sphinx. See the
+:ref:`documentation <doxygen>` section. 
 
 Bugs and Error Reports
 ##############################

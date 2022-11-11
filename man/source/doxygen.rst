@@ -3,9 +3,8 @@
 Documentation
 ==============
 
-dcEmb's documentation can currently be found 
+dcEmb's Doxygen documentation can currently be found 
 `here <https://embecosm.github.io/dcEmb_docs/Doxygen/index.html>`_.
-
 
 About Doxygen
 #############
