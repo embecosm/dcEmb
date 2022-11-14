@@ -81,8 +81,8 @@ TEST(utility_test, logdet) {
 }
 
 TEST(utility_test, diff) {
-  std::function<Eigen::VectorXd(Eigen::VectorXd)> test1 =
-      [](Eigen::VectorXd a) {
+  std::function<Eigen::VectorXd(const Eigen::VectorXd&)> test1 =
+      [](const Eigen::VectorXd& a) {
         return a.unaryExpr([](double x) { return exp(x); });
       };
 
@@ -90,24 +90,24 @@ TEST(utility_test, diff) {
   vec1 << 1, 2;
   Eigen::MatrixXd mat1 = Eigen::MatrixXd::Identity(2, 2);
   Eigen::MatrixXd out1 = utility::diff(test1, vec1, mat1);
-  std::function<Eigen::VectorXd(Eigen::VectorXd)> test2 =
-      [](Eigen::VectorXd a) {
+  std::function<Eigen::VectorXd(const Eigen::VectorXd&)> test2 =
+      [](const Eigen::VectorXd& a) {
         return a.unaryExpr([](double x) { return pow(x, 2); });
       };
   Eigen::VectorXd vec2(2);
   vec2 << 1, 2;
   Eigen::MatrixXd mat2 = Eigen::MatrixXd::Identity(2, 2);
   Eigen::MatrixXd out2 = utility::diff(test2, vec2, mat2);
-  std::function<Eigen::VectorXd(Eigen::VectorXd)> test3 =
-      [](Eigen::VectorXd a) {
+  std::function<Eigen::VectorXd(const Eigen::VectorXd&)> test3 =
+      [](const Eigen::VectorXd& a) {
         return a.unaryExpr([](double x) { return log(x); });
       };
   Eigen::VectorXd vec3(2);
   vec3 << 1, 2;
   Eigen::MatrixXd mat3 = Eigen::MatrixXd::Identity(2, 2);
   Eigen::MatrixXd out3 = utility::diff(test3, vec3, mat3);
-  std::function<Eigen::VectorXd(Eigen::VectorXd)> test4 =
-      [](Eigen::VectorXd a) {
+  std::function<Eigen::VectorXd(const Eigen::VectorXd&)> test4 =
+      [](const Eigen::VectorXd& a) {
         return a.unaryExpr([](double x) { return 1 / x; });
       };
   Eigen::VectorXd vec4(2);
