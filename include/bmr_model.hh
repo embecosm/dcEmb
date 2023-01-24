@@ -62,7 +62,7 @@ class bmr_model {
    * Calculate all reductions of the given DCM.
    *
    * The returned DCM will vary depending on the parameters of the BMR:
-   * a DCm that is the Bayesian Model Average (BMA) of all candidate
+   * a DCM that is the Bayesian Model Average (BMA) of all candidate
    * reduced models, or a DCM that corresponds to the best reduced model
    * (by Free Energy).
    * In the case of a BMA, free energy will be set to -INFINITY
@@ -79,7 +79,8 @@ class bmr_model {
    *  - All parameters selected as valid choices for reduction
    *
    */
-  void reduce() {
+  void reduce() { reduce(1); }
+  void reduce(const int& return_bma) {
     Eigen::BDCSVD<Eigen::MatrixXd> svd;
     svd.setThreshold(std::numeric_limits<double>::epsilon() * 64);
     svd.compute(DCM_in.prior_parameter_covariances,
@@ -316,24 +317,32 @@ class bmr_model {
         (this->BMA).posterior_p_c_all.push_back(log_evidence.at(2));
       }
     }
-    (this->BMA).free_energy_all = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(
-        free_energy_tmp.data(), free_energy_tmp.size());
-    this->BMA.average_ffx();
-
-    this->free_energy_vector = free_energy_vec2;
-    this->posterior_probability_vector = sm_free_energy_vec2;
-    this->model_space = K;
 
     this->DCM_out = this->DCM_in;
     (this->DCM_out).prior_parameter_expectations = prior_r_p_e;
     (this->DCM_out).prior_parameter_covariances = prior_r_p_c;
-    (this->DCM_out).conditional_parameter_expectations =
-        (this->BMA).posterior_p_e;
-    (this->DCM_out).conditional_parameter_covariances =
-        (this->BMA).posterior_p_c;
     (this->DCM_out).posterior_over_parameters = posterior_p_p_e;
-    (this->DCM_out).free_energy = -INFINITY;
+    this->free_energy_vector = free_energy_vec2;
+    this->posterior_probability_vector = sm_free_energy_vec2;
+    this->model_space = K;
 
+    if (return_bma) {
+      (this->BMA).free_energy_all =
+          Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(free_energy_tmp.data(),
+                                                        free_energy_tmp.size());
+      this->BMA.average_ffx();
+      (this->DCM_out).conditional_parameter_expectations =
+          (this->BMA).posterior_p_e;
+      (this->DCM_out).conditional_parameter_covariances =
+          (this->BMA).posterior_p_c;
+      (this->DCM_out).free_energy = -INFINITY;
+    } else {
+      (this->DCM_out).conditional_parameter_expectations =
+          (this->BMA).posterior_p_e_all.at(0);
+      (this->DCM_out).conditional_parameter_covariances =
+          (this->BMA).posterior_p_c_all.at(0);
+      (this->DCM_out).free_energy = free_energy_tmp.at(0);
+    }
     return;
   }
 };

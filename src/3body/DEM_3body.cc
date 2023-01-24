@@ -17,10 +17,10 @@
 #include <list>
 #include <vector>
 #include "Eigen/Dense"
+#include "bmr_model.hh"
 #include "country_data.hh"
 #include "dynamic_3body_model.hh"
 #include "utility.hh"
-#include "bmr_model.hh"
 
 /**
  * Run the 3body example
@@ -62,9 +62,9 @@ int run_3body_test() {
   bmr_model<dynamic_3body_model> BMR;
   BMR.DCM_in = model;
   BMR.reduce();
-  Eigen::MatrixXd out4 =
-      model.eval_generative(BMR.DCM_out.conditional_parameter_expectations,
-                            BMR.DCM_out.parameter_locations, BMR.DCM_out.num_samples, 3);
+  Eigen::MatrixXd out4 = model.eval_generative(
+      BMR.DCM_out.conditional_parameter_expectations,
+      BMR.DCM_out.parameter_locations, BMR.DCM_out.num_samples, 3);
   utility::print_matrix("../visualisation/deriv2_generative.csv", out4);
   return 0;
 }
@@ -94,15 +94,16 @@ Eigen::VectorXd true_prior_expectations() {
  */
 Eigen::VectorXd default_prior_expectations() {
   Eigen::MatrixXd default_prior_expectation = Eigen::MatrixXd::Zero(7, 3);
-  default_prior_expectation.row(0) << 0.95, 1.05, 1.05;
-  default_prior_expectation.row(1) << 0.97000436 + 0.05, -0.97000436 - 0.05, 0;
-  default_prior_expectation.row(2) << -0.24308753 + 0.05, 0.24308753 + 0.05, 0;
-  default_prior_expectation.row(3) << 0.05, 0.05, -0.05;
-  default_prior_expectation.row(4) << 0.93240737 / 2 + 0.05,
-      0.93240737 / 2 - 0.05, -0.93240737 + 0.05;
-  default_prior_expectation.row(5) << 0.86473146 / 2 + 0.05,
-      0.86473146 / 2 - 0.05, -0.86473146 - 0.05;
-  default_prior_expectation.row(6) << 0.05, -0.05, 0.05;
+  double x =  0.04;
+  default_prior_expectation.row(0) << 1 - x, 1 + x, 1 + x;
+  default_prior_expectation.row(1) << 0.97000436 + x, -0.97000436 - x, 0 + x;
+  default_prior_expectation.row(2) << -0.24308753 + x, 0.24308753 + x, 0 - x;
+  default_prior_expectation.row(3) << 0 + x, 0 + x, 0 - x;
+  default_prior_expectation.row(4) << 0.93240737 / 2  + x, 0.93240737 / 2 - x,
+      -0.93240737 + x;
+  default_prior_expectation.row(5) << 0.86473146 / 2  + x, 0.86473146 / 2 - x,
+      -0.86473146 - x;
+  default_prior_expectation.row(6) << 0 + x, 0 - x, 0 + x;
   Eigen::Map<Eigen::VectorXd> return_default_prior_expectation(
       default_prior_expectation.data(),
       default_prior_expectation.rows() * default_prior_expectation.cols());
@@ -116,7 +117,7 @@ Eigen::MatrixXd default_prior_covariances() {
   double flat = 1.0;                    // flat priors
   double informative = 1 / (double)16;  // informative priors
   double precise = 1 / (double)256;     // precise priors
-  double fixed = 1 / (double)2048;      // precise priors
+  double fixed = 1 / (double)2048;      // fixed priors
   Eigen::MatrixXd default_prior_covariance = Eigen::MatrixXd::Zero(7, 3);
   default_prior_covariance.row(0) = Eigen::VectorXd::Constant(3, informative);
   default_prior_covariance.row(1) = Eigen::VectorXd::Constant(3, informative);
