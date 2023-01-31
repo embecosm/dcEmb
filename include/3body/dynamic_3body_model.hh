@@ -26,24 +26,25 @@ class dynamic_3body_model : public dynamic_model {
    */
   parameter_location_3body parameter_locations;
   int num_bodies = 3;
+  double G = 1;
   Eigen::VectorXd get_observed_outcomes();
   std::function<Eigen::VectorXd(Eigen::VectorXd)> get_forward_model_function();
   Eigen::VectorXd forward_model(
       const Eigen::VectorXd& parameters,
       const parameter_location_3body& parameter_locations,
       const int& timeseries_length, const Eigen::VectorXi& select_response_vars,
-      const int& num_bodies);
+      const int& num_bodies, const double& G);
   Eigen::MatrixXd eval_generative(
       const Eigen::VectorXd& parameters,
       const parameter_location_3body& parameter_locations,
-      const int& timeseries_length, const int& num_bodies);
+      const int& timeseries_length, const int& num_bodies, const double& G);
   Eigen::MatrixXd eval_generative(
       const Eigen::VectorXd& parameters,
       const parameter_location_3body& parameter_locations,
-      const int& timeseries_length, const int& num_bodies,
+      const int& timeseries_length, const int& num_bodies, const double& G,
       const Eigen::VectorXi& select_response_vars);
   Eigen::VectorXd differential_eq(const Eigen::VectorXd& state,
-                                  const int& num_bodies);
+                                  const int& num_bodies, const double& G);
   dynamic_3body_model();
 };
 

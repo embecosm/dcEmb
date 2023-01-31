@@ -47,7 +47,7 @@ dynamic_3body_model::get_forward_model_function() {
   std::function<Eigen::VectorXd(Eigen::VectorXd)> forward_model = std::bind(
       &dynamic_3body_model::forward_model, this, std::placeholders::_1,
       this->parameter_locations, this->num_samples, this->select_response_vars,
-      this->num_bodies);
+      this->num_bodies, this->G);
   return forward_model;
 }
 
@@ -58,10 +58,10 @@ Eigen::VectorXd dynamic_3body_model::forward_model(
     const Eigen::VectorXd& parameters,
     const parameter_location_3body& parameter_locations,
     const int& timeseries_length, const Eigen::VectorXi& select_response_vars,
-    const int& num_bodies) {
+    const int& num_bodies, const double& G) {
   Eigen::MatrixXd gen =
       eval_generative(parameters, parameter_locations, timeseries_length,
-                      num_bodies, select_response_vars);
+                      num_bodies, G, select_response_vars);
   Eigen::Map<Eigen::VectorXd> output(gen.data(), gen.rows() * gen.cols());
   return output;
 }
@@ -73,7 +73,7 @@ Eigen::VectorXd dynamic_3body_model::forward_model(
 Eigen::MatrixXd dynamic_3body_model::eval_generative(
     const Eigen::VectorXd& parameters,
     const parameter_location_3body& parameter_locations,
-    const int& timeseries_length, const int& num_bodies) {
+    const int& timeseries_length, const int& num_bodies, const double& G) {
   Eigen::MatrixXd output =
       Eigen::MatrixXd::Zero(timeseries_length, parameters.size());
   double h = 0.001;
@@ -81,7 +81,7 @@ Eigen::MatrixXd dynamic_3body_model::eval_generative(
   output.row(0) = state;
   std::function<Eigen::VectorXd(Eigen::VectorXd)> dfdt =
       std::bind(&dynamic_3body_model::differential_eq, this,
-                std::placeholders::_1, num_bodies);
+                std::placeholders::_1, num_bodies, G);
   for (int i = 1; i < timeseries_length; i++) {
     for (int j = 0; j < 10; j++) {
       Eigen::VectorXd state_delta = utility::rungekutta(dfdt, state, h);
@@ -94,10 +94,10 @@ Eigen::MatrixXd dynamic_3body_model::eval_generative(
 Eigen::MatrixXd dynamic_3body_model::eval_generative(
     const Eigen::VectorXd& parameters,
     const parameter_location_3body& parameter_locations,
-    const int& timeseries_length, const int& num_bodies,
+    const int& timeseries_length, const int& num_bodies, const double& G,
     const Eigen::VectorXi& select_response_vars) {
   Eigen::MatrixXd output = eval_generative(parameters, parameter_locations,
-                                           timeseries_length, num_bodies);
+                                           timeseries_length, num_bodies, G);
 
   return output(Eigen::all, select_response_vars);
 }
@@ -107,9 +107,8 @@ Eigen::MatrixXd dynamic_3body_model::eval_generative(
  * 3body state
  */
 Eigen::VectorXd dynamic_3body_model::differential_eq(
-    const Eigen::VectorXd& state_in, const int& num_bodies) {
+    const Eigen::VectorXd& state_in, const int& num_bodies, const double& G) {
   Eigen::VectorXd state_var = state_in;
-  double G = 1;  // Gravitational Constant
   // Convert our state vector to a matrix where each col is a planet
   Eigen::Map<Eigen::MatrixXd> state(state_var.data(), 7, num_bodies);
   // Initialise return matrix

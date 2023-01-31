@@ -15,9 +15,10 @@
 #include "parameter_location_3body.hh"
 #pragma once
 
-Eigen::VectorXd true_prior_expectations();
+Eigen::VectorXd true_prior_expectations(const double& x);
 Eigen::VectorXd default_prior_expectations();
 Eigen::MatrixXd default_prior_covariances();
 parameter_location_3body default_parameter_locations();
 Eigen::VectorXd default_hyper_expectations();
 Eigen::MatrixXd default_hyper_covariances();
+Eigen::VectorXi default_random_effects();

@@ -44,7 +44,8 @@ Eigen::VectorXd utility::dx(const Eigen::MatrixXd& dfdx,
 }
 
 /**
- * Calculate a fast approximation to the log-determinant of a square matrix
+ * Calculate a fast approximation to the log-determinant of a positive-semi
+ * definite square matrix
  */
 double utility::logdet(const Eigen::MatrixXd& mat) {
   double tol = 1e-16;
@@ -60,8 +61,8 @@ double utility::logdet(const Eigen::MatrixXd& mat) {
     return pos_eig_values.sum();
   } else {
     Eigen::BDCSVD<Eigen::MatrixXd> svd;
-    svd.setThreshold(1e-6);
-    svd.compute(mat, Eigen::ComputeThinV | Eigen::ComputeThinU);
+    svd.setThreshold(tol);
+    svd.compute(mat, Eigen::HouseholderQRPreconditioner | Eigen::ComputeThinV | Eigen::ComputeThinU);
     Eigen::VectorXd singular_values = svd.singularValues();
     Eigen::VectorXd log_singular_values =
         singular_values.unaryExpr([tol](double x) {

@@ -73,11 +73,11 @@ TEST(utility_test, logdet) {
   mat3 << -5, 0, 0, 0, 5, 0, 0, 0, -5;
   Eigen::MatrixXd mat4(3, 3);
   mat4 << -1, 2, -3, -4, -5, 6, 7, 8, -9;
-  EXPECT_DOUBLE_EQ(-32.37044465322613, utility::logdet(mat0));
+  EXPECT_DOUBLE_EQ(2.8903717578961636, utility::logdet(mat0));
   EXPECT_DOUBLE_EQ(4.8283137373023006, utility::logdet(mat1));
   EXPECT_DOUBLE_EQ(0, utility::logdet(mat2));
   EXPECT_DOUBLE_EQ(1.6094379124341003, utility::logdet(mat3));
-  EXPECT_DOUBLE_EQ(1.7917594692280479, utility::logdet(mat4));
+  EXPECT_DOUBLE_EQ(1.7917594692280563, utility::logdet(mat4));
 }
 
 TEST(utility_test, diff) {

@@ -39,7 +39,7 @@ TEST(serialization, 3body) {
 
   Eigen::MatrixXd true_output =
       model.eval_generative(true_3body_prior_expectations(),
-                            model.parameter_locations, model.num_samples, 3);
+                            model.parameter_locations, model.num_samples, 3, 1);
   Eigen::MatrixXd response_vars =
       Eigen::MatrixXd::Zero(model.num_samples, model.num_response_vars);
   Eigen::VectorXi select_response_vars =

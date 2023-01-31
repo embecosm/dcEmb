@@ -37,7 +37,7 @@ int run_3body_test() {
 
   Eigen::MatrixXd out1 =
       model.eval_generative(true_prior_expectations(),
-                            model.parameter_locations, model.num_samples, 3);
+                            model.parameter_locations, model.num_samples, 3, 1);
   utility::print_matrix("../visualisation/true_generative.csv", out1);
   Eigen::MatrixXd response_vars =
       Eigen::MatrixXd::Zero(model.num_samples, model.num_response_vars);
@@ -52,11 +52,11 @@ int run_3body_test() {
   model.invert_model();
   Eigen::MatrixXd out2 =
       model.eval_generative(model.conditional_parameter_expectations,
-                            model.parameter_locations, model.num_samples, 3);
+                            model.parameter_locations, model.num_samples, 3, 1);
   utility::print_matrix("../visualisation/deriv_generative.csv", out2);
   Eigen::MatrixXd out3 =
       model.eval_generative(default_prior_expectations(),
-                            model.parameter_locations, model.num_samples, 3);
+                            model.parameter_locations, model.num_samples, 3, 1);
   utility::print_matrix("../visualisation/org_generative.csv", out3);
 
   bmr_model<dynamic_3body_model> BMR;
@@ -64,7 +64,7 @@ int run_3body_test() {
   BMR.reduce();
   Eigen::MatrixXd out4 = model.eval_generative(
       BMR.DCM_out.conditional_parameter_expectations,
-      BMR.DCM_out.parameter_locations, BMR.DCM_out.num_samples, 3);
+      BMR.DCM_out.parameter_locations, BMR.DCM_out.num_samples, 3, 1);
   utility::print_matrix("../visualisation/deriv2_generative.csv", out4);
   return 0;
 }

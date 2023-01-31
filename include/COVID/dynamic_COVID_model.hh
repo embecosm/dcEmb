@@ -39,17 +39,22 @@ class dynamic_COVID_model : public dynamic_model {
   Eigen::MatrixXd eval_features(Eigen::MatrixXd response_vars);
   SparseMD eval_transition_probability_matrix(
       const Eigen::VectorXd& parameters_exp,
+      const parameter_location_COVID& parameter_locations,
       const Eigen::VectorXd& ensemble_density);
   SparseMD calc_location_transition_matrix(
       const Eigen::VectorXd& parameter_exp,
+      const parameter_location_COVID& parameter_locations,
       const Eigen::VectorXd& ensemble_density);
   SparseMD calc_infection_transition_matrix(
       const Eigen::VectorXd& parameter_exp,
+      const parameter_location_COVID& parameter_locations,
       const Eigen::VectorXd& ensemble_density);
   SparseMD calc_clinical_transition_matrix(
-      const Eigen::VectorXd& parameter_exp);
+      const Eigen::VectorXd& parameter_exp,
+      const parameter_location_COVID& parameter_locations);
   SparseMD calc_testing_transition_matrix(
       const Eigen::VectorXd& parameter_exp,
+      const parameter_location_COVID& parameter_locations,
       const Eigen::VectorXd& ensemble_density);
   Eigen::MatrixXd eval_generative(
       const Eigen::VectorXd& parameters,

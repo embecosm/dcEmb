@@ -11,10 +11,10 @@ cmake_minimum_required(VERSION 3.16)
 
 project(dcm_demo LANGUAGES CXX)
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}-std=c++14 -O3 -flto -march=native\
- -D_GLIBCXX_PARALLEL -DNDEBUG")
-SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}-O3")
-SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}-O3")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}-std=c++14 -O3 -ffast-math -fno-unsafe-math-optimizations -flto -march=native\
+ -D_GLIBCXX_PARALLEL")
+SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}-O3 -g")
+SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}-O3 -g")
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -81,35 +81,45 @@ set(SOURCES_SERIALIZATION_TESTS
     tests/serialization_test.cc
 )
 
-add_executable(dcm_covid ${SOURCES_COVID})
-if(OpenMP_FOUND)
-    target_link_libraries(dcm_covid PUBLIC OpenMP::OpenMP_CXX)
-endif(OpenMP_FOUND)
-set_target_properties(dcm_covid PROPERTIES COMPILE_FLAGS "")
+# add_executable(dcm_covid ${SOURCES_COVID})
 
-add_executable(dcm_3body ${SOURCES_3BODY})
-if(OpenMP_FOUND)
-    target_link_libraries(dcm_3body PUBLIC OpenMP::OpenMP_CXX)
-endif(OpenMP_FOUND)
-set_target_properties(dcm_3body PROPERTIES COMPILE_FLAGS "")
+# if(OpenMP_FOUND)
+#     target_link_libraries(dcm_covid PUBLIC OpenMP::OpenMP_CXX)
+# endif(OpenMP_FOUND)
+
+# set_target_properties(dcm_covid PROPERTIES COMPILE_FLAGS "")
+
+# add_executable(dcm_3body ${SOURCES_3BODY})
+
+# if(OpenMP_FOUND)
+#     target_link_libraries(dcm_3body PUBLIC OpenMP::OpenMP_CXX)
+# endif(OpenMP_FOUND)
+
+# set_target_properties(dcm_3body PROPERTIES COMPILE_FLAGS "")
 
 add_executable(run_tests ${SOURCES_TESTS})
+
 if(OpenMP_FOUND)
     target_link_libraries(run_tests PUBLIC OpenMP::OpenMP_CXX)
 endif(OpenMP_FOUND)
+
 target_link_libraries(run_tests PUBLIC gtest_main)
 set_target_properties(run_tests PROPERTIES COMPILE_FLAGS "")
 
 add_executable(run_tests_long ${SOURCES_TESTS_LONG})
+
 if(OpenMP_FOUND)
     target_link_libraries(run_tests_long PUBLIC OpenMP::OpenMP_CXX)
 endif(OpenMP_FOUND)
+
 target_link_libraries(run_tests_long PUBLIC gtest_main)
 set_target_properties(run_tests_long PROPERTIES COMPILE_FLAGS "")
 
-add_executable(run_serialization_tests ${SOURCES_SERIALIZATION_TESTS})
-if(OpenMP_FOUND)
-    target_link_libraries(run_serialization_tests PUBLIC OpenMP::OpenMP_CXX)
-endif(OpenMP_FOUND)
-target_link_libraries(run_serialization_tests PUBLIC gtest_main)
-set_target_properties(run_serialization_tests PROPERTIES COMPILE_FLAGS "")
+# add_executable(run_serialization_tests ${SOURCES_SERIALIZATION_TESTS})
+
+# if(OpenMP_FOUND)
+#     target_link_libraries(run_serialization_tests PUBLIC OpenMP::OpenMP_CXX)
+# endif(OpenMP_FOUND)
+
+# target_link_libraries(run_serialization_tests PUBLIC gtest_main)
+# set_target_properties(run_serialization_tests PROPERTIES COMPILE_FLAGS "")

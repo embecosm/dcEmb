@@ -130,8 +130,8 @@ Eigen::MatrixXd dynamic_COVID_model::eval_generative(
          (parameters_exp_in(PL.subs_testing) *
           utility::phi((i + 1 - 32 * parameters_exp_in(PL.test_lat)) /
                        parameters_exp_in(PL.test_buildup))));
-    SparseMD transition_probability_matrix =
-        eval_transition_probability_matrix(parameters_exp, ensemble_density);
+    SparseMD transition_probability_matrix = eval_transition_probability_matrix(
+        parameters_exp, parameter_locations, ensemble_density);
     ensemble_density =
         (transition_probability_matrix * ensemble_density).eval();
     ensemble_density = (ensemble_density / ensemble_density.sum()).eval();
@@ -181,6 +181,7 @@ Evaluate the transition probability matrix
  */
 SparseMD dynamic_COVID_model::eval_transition_probability_matrix(
     const Eigen::VectorXd& parameters_exp_in,
+    const parameter_location_COVID& parameter_locations,
     const Eigen::VectorXd& ensemble_density) {
   Eigen::VectorXd parameter_exp = parameters_exp_in;
   // Upper bound probabilities
@@ -194,13 +195,13 @@ SparseMD dynamic_COVID_model::eval_transition_probability_matrix(
       std::min(parameter_exp(PL.p_surv_sevhome), 1.0);
 
   SparseMD loc_transition_matrix =
-      calc_location_transition_matrix(parameter_exp, ensemble_density);
+      calc_location_transition_matrix(parameter_exp, parameter_locations, ensemble_density);
   SparseMD inf_transition_matrix =
-      calc_infection_transition_matrix(parameter_exp, ensemble_density);
+      calc_infection_transition_matrix(parameter_exp, parameter_locations, ensemble_density);
   SparseMD cli_transition_matrix =
-      calc_clinical_transition_matrix(parameter_exp);
+      calc_clinical_transition_matrix(parameter_exp, parameter_locations);
   SparseMD test_transition_matrix =
-      calc_testing_transition_matrix(parameter_exp, ensemble_density);
+      calc_testing_transition_matrix(parameter_exp, parameter_locations, ensemble_density);
 
   SparseMD transition_matrix = (loc_transition_matrix * inf_transition_matrix *
                                 cli_transition_matrix * test_transition_matrix)
@@ -213,6 +214,7 @@ SparseMD dynamic_COVID_model::eval_transition_probability_matrix(
  */
 SparseMD dynamic_COVID_model::calc_location_transition_matrix(
     const Eigen::VectorXd& parameter_exp,
+    const parameter_location_COVID& parameter_locations,
     const Eigen::VectorXd& ensemble_density) {
   Eigen::VectorXi size_order = Eigen::VectorXi::Zero(4);
   size_order << 5, 5, 4, 4;
@@ -325,6 +327,7 @@ SparseMD dynamic_COVID_model::calc_location_transition_matrix(
  */
 SparseMD dynamic_COVID_model::calc_infection_transition_matrix(
     const Eigen::VectorXd& parameter_exp,
+    const parameter_location_COVID& parameter_locations,
     const Eigen::VectorXd& ensemble_density) {
   Eigen::VectorXi size_order = Eigen::VectorXi::Zero(4);
   size_order << 5, 5, 4, 4;
@@ -389,7 +392,8 @@ SparseMD dynamic_COVID_model::calc_infection_transition_matrix(
  * Calculate the transition matrix for the clinical parameters
  */
 SparseMD dynamic_COVID_model::calc_clinical_transition_matrix(
-    const Eigen::VectorXd& parameter_exp) {
+    const Eigen::VectorXd& parameter_exp,
+    const parameter_location_COVID& parameter_locations) {
   double p_sev_symp_val = parameter_exp(PL.p_sev_symp);
   double accu_symp_rate = exp(-1 / parameter_exp(PL.symp_period));
   double ards_rate = exp(-1 / parameter_exp(PL.ccu_period));
@@ -459,6 +463,7 @@ SparseMD dynamic_COVID_model::calc_clinical_transition_matrix(
  */
 SparseMD dynamic_COVID_model::calc_testing_transition_matrix(
     const Eigen::VectorXd& parameter_exp,
+    const parameter_location_COVID& parameter_locations,
     const Eigen::VectorXd& ensemble_density) {
   Eigen::VectorXi size_order = Eigen::VectorXi::Zero(4);
   size_order << 5, 5, 4, 4;

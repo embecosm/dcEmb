@@ -49,7 +49,7 @@ class peb_model : public dynamic_model {
    */
   Eigen::MatrixXd within_design_matrix;
   /**
-   * @brief Design matrix of second level (within subject) parameters
+   * @brief locations of second level (within subject) parameters
    */
   Eigen::VectorXd random_precision_comps;
   Eigen::MatrixXd prior_parameter_covariances;
@@ -82,6 +82,15 @@ class peb_model : public dynamic_model {
    * Invert a PEB model, producing estimates of optimized empirical priors
    * on the given DCMs. Note that this method requires that the DCMs
    * passed in have already been estimated.
+   * 
+   * Note that the definitions of "within-subject" and "between subject" effects
+   * are assigned here in a way that may initially be confusing to
+   * those who are used to how the terminology is used in mixed models.
+   * 
+   * Here, the "between subject" effects specify effects that vary between DCMs
+   * that are not included in the model, and "within subject" effects specify
+   * which of the DCM model parameters are modulated by these effects.  
+   *  
    * Currently assumes:
    *  - no precision components are passed in, defaulting to one precision
    *  component
@@ -94,8 +103,8 @@ class peb_model : public dynamic_model {
     int num_models = this->GCM.size();
     int num_random_effects = this->random_effects.size();
     int num_precision_comps = 1;
-    int num_second_level = num_models * num_random_effects;
     int num_between_effects = between_design_matrix.cols();
+    int num_second_level = num_between_effects * num_random_effects;
     this->empirical_GCM = this->GCM;
     int alpha = 1;
     int beta = 16;

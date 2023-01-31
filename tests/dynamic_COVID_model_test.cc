@@ -24,7 +24,169 @@
 #include "import_COVID.hh"
 #include "utility.hh"
 
-TEST(dynamic_COVID_model_test, system) {
+/**
+ * A test of the PEB functionality on the COVID-19 dataset. Uses DCM models from
+ * an Octave run of the COVID-19 model and the PEB output of the same, and
+ * compares the output to the BMR output of the same model.
+ *
+ * Non-determinism in key functions (e.g. SVD) means that the optimization
+ * algorithms within do not always choose the same paths between implementations
+ * (C++ Octave), or come to the same results. This test assumes that the results
+ * should be fairly similar.
+ */
+TEST(dynamic_COVID_model_test, bmr) {
+  int num_countries = 5;
+  std::vector<dynamic_COVID_model> GCM;
+  std::vector<country_data> countries = read_country_data(num_countries);
+  GCM = generate_comparison_data(countries);
+
+  // Set up 3rd level design matricies
+  Eigen::VectorXd lat = Eigen::VectorXd(num_countries);
+  Eigen::VectorXd lon = Eigen::VectorXd(num_countries);
+  Eigen::VectorXd pop = Eigen::VectorXd(num_countries);
+  Eigen::VectorXd ones = Eigen::VectorXd::Ones(num_countries);
+  for (int i = 0; i < num_countries; i++) {
+    lat(i) = (countries.at(i).latitude * 2 * M_PI / 360);
+    lon(i) = (countries.at(i).longitude * 2 * M_PI / 360);
+    pop(i) = log(countries.at(i).pop);
+  }
+  Eigen::MatrixXd design_matrix_tmp = Eigen::MatrixXd(5, 10);
+  design_matrix_tmp.col(0) = ones;
+  design_matrix_tmp.col(1) = pop;
+  for (int i = 1; i < 5; i++) {
+    design_matrix_tmp.col(2 * i) =
+        lon.unaryExpr([i](double x) { return sin(i * x); });
+    design_matrix_tmp.col(2 * i + 1) =
+        lat.unaryExpr([i](double x) { return sin(i * x); });
+  }
+  design_matrix_tmp = utility::orth(design_matrix_tmp);
+  Eigen::MatrixXd design_matrix = Eigen::MatrixXd(5, 5);
+  for (int i = 0; i < 5; i++) {
+    design_matrix.col(i) =
+        design_matrix_tmp.col(i) /
+        sqrt(design_matrix_tmp.col(i).array().square().sum());
+  }
+  design_matrix.col(0) = Eigen::VectorXd::Ones(5);
+  peb_model<dynamic_COVID_model> PEB;
+  // Current assumption: All models are using the same parameters in the same
+  // Locations
+  PEB.random_effects = default_random_effects(GCM.at(0).parameter_locations);
+  PEB.GCM = GCM;
+  PEB.between_design_matrix = design_matrix;
+  PEB.max_invert_it = 64;
+  PEB.invert_model();
+
+  generate_PEB_values(PEB);
+
+  bmr_model<peb_model<dynamic_COVID_model>> BMR;
+  BMR.DCM_in = PEB;
+  BMR.reduce();
+  bma_model<peb_model<dynamic_COVID_model>> BMA = BMR.BMA;
+
+  Eigen::MatrixXd bma_out_p_p_e = BMA.posterior_p_e;
+  Eigen::MatrixXd bma_true_p_p_e = utility::read_matrix<Eigen::MatrixXd>(
+      "../src/data/bma_posterior_p_e.csv");
+
+  Eigen::VectorXd vec1 = bma_out_p_p_e(Eigen::seq(0, 27), 0);
+  Eigen::VectorXd vec2 = bma_true_p_p_e(Eigen::seq(0, 27), 0);
+
+  dynamic_COVID_model COVID_model;
+  parameter_location_COVID pl = default_parameter_locations();
+  Eigen::VectorXi select_response_vars = Eigen::VectorXi::Zero(2);
+  select_response_vars << 0, 1;
+  Eigen::MatrixXd out1 =
+      COVID_model.eval_generative(vec1, pl, 1000, select_response_vars);
+  Eigen::MatrixXd out2 =
+      COVID_model.eval_generative(vec2, pl, 1000, select_response_vars);
+
+  for (int i = 0; i < bma_true_p_p_e.size(); i++) {
+    if (bma_true_p_p_e(i) < 1e-5) {
+      EXPECT_LT(bma_out_p_p_e(i), 1e-5);
+    }
+  }
+  EXPECT_LT((out1 - out2).array().abs().sum() / (vec2.rows() * vec2.cols()),
+            0.1);
+}
+
+/**
+ * A test of the PEB functionality on the COVID-19 dataset. Uses DCM models from
+ * an Octave run of the COVID-19 model over 5 countries as input, and compares
+ * results to the PEB output of the same Octave model.
+ *
+ * Non-determinism in key functions (e.g. SVD) means that the optimization
+ * algorithms within do not always choose the same paths between implementations
+ * (C++ Octave), or come to the same results. This test assumes that the results
+ * should be fairly similar.
+ *
+ * WIP: Expand this test to rerun inversion with empirical priors.
+ */
+TEST(dynamic_COVID_model_test, peb) {
+  int num_countries = 5;
+  std::vector<dynamic_COVID_model> GCM;
+  std::vector<country_data> countries = read_country_data(num_countries);
+  GCM = generate_comparison_data(countries);
+
+  // Set up 3rd level design matricies
+  Eigen::VectorXd lat = Eigen::VectorXd(num_countries);
+  Eigen::VectorXd lon = Eigen::VectorXd(num_countries);
+  Eigen::VectorXd pop = Eigen::VectorXd(num_countries);
+  Eigen::VectorXd ones = Eigen::VectorXd::Ones(num_countries);
+  for (int i = 0; i < num_countries; i++) {
+    lat(i) = (countries.at(i).latitude * 2 * M_PI / 360);
+    lon(i) = (countries.at(i).longitude * 2 * M_PI / 360);
+    pop(i) = log(countries.at(i).pop);
+  }
+  Eigen::MatrixXd design_matrix_tmp = Eigen::MatrixXd(5, 10);
+  design_matrix_tmp.col(0) = ones;
+  design_matrix_tmp.col(1) = pop;
+  for (int i = 1; i < 5; i++) {
+    design_matrix_tmp.col(2 * i) =
+        lon.unaryExpr([i](double x) { return sin(i * x); });
+    design_matrix_tmp.col(2 * i + 1) =
+        lat.unaryExpr([i](double x) { return sin(i * x); });
+  }
+  design_matrix_tmp = utility::orth(design_matrix_tmp);
+  Eigen::MatrixXd design_matrix = Eigen::MatrixXd(5, 5);
+  for (int i = 0; i < 5; i++) {
+    design_matrix.col(i) =
+        design_matrix_tmp.col(i) /
+        sqrt(design_matrix_tmp.col(i).array().square().sum());
+  }
+  design_matrix.col(0) = Eigen::VectorXd::Ones(5);
+  peb_model<dynamic_COVID_model> PEB;
+  // Current assumption: All models are using the same parameters in the same
+  // Locations
+  PEB.random_effects = default_random_effects(GCM.at(0).parameter_locations);
+  PEB.GCM = GCM;
+  PEB.between_design_matrix = design_matrix;
+  PEB.max_invert_it = 64;
+  PEB.invert_model();
+
+  peb_model<dynamic_COVID_model> PEB_true;
+
+  generate_PEB_values(PEB_true);
+
+
+  Eigen::MatrixXd vec1 =
+      PEB.conditional_parameter_expectations;
+  Eigen::MatrixXd vec2 =
+      PEB_true.conditional_parameter_expectations;
+
+  EXPECT_LT((vec2 - vec1).array().abs().sum() / (vec2.rows() * vec2.cols()),
+            0.1);
+}
+
+/**
+ * A test of the PEB functionality on the COVID-19 dataset. Compares DCM models
+ * of a run across 5 countries in Octave vs a run in dcEmb across the same data.
+ *
+ * Non-determinism in key functions (e.g. SVD) means that the optimization
+ * algorithms within do not always choose the same paths between implementations
+ * (C++ Octave), or come to the same results. This test assumes that the results
+ * should be fairly similar.
+ */
+TEST(dynamic_COVID_model_test, inversion) {
+  exit(1);
   int num_countries = 5;
   std::vector<dynamic_COVID_model> GCM;
   std::vector<country_data> countries = read_country_data(num_countries);
@@ -54,9 +216,8 @@ TEST(dynamic_COVID_model_test, system) {
         COVID_model.parameter_locations, COVID_model.num_samples,
         COVID_model.select_response_vars);
     Eigen::MatrixXd out2 = COVID_model.eval_generative(
-        utility::read_matrix<Eigen::MatrixXd>(
-            "../src/data/" + country.name +
-            "_posterior_p_e.csv"),
+        utility::read_matrix<Eigen::MatrixXd>("../src/data/" + country.name +
+                                              "_posterior_p_e.csv"),
         COVID_model.parameter_locations, COVID_model.num_samples,
         COVID_model.select_response_vars);
 
@@ -75,8 +236,8 @@ TEST(dynamic_COVID_model_test, system) {
     std::cout << "MSE, C++, cases: " << cpp_mse_case << '\n';
     std::cout << "MSE, Octave, cases: " << oct_mse_case << '\n';
 
-    EXPECT_TRUE((oct_mse_death / oct_mse_death) < 1.10);
-    EXPECT_TRUE((oct_mse_case / oct_mse_case) < 1.10);
+    EXPECT_TRUE((oct_mse_death / oct_mse_death) < 1.02);
+    EXPECT_TRUE((oct_mse_case / oct_mse_case) < 1.02);
   }
 }
 
@@ -205,4 +366,138 @@ Eigen::MatrixXd default_hyper_covariances() {
   Eigen::MatrixXd default_hyper_covariance = Eigen::MatrixXd::Zero(2, 2);
   default_hyper_covariance.diagonal() << 1.0 / 64.0, 1.0 / 64.0;
   return default_hyper_covariance;
+}
+
+Eigen::VectorXi default_random_effects(parameter_location_COVID& pl) {
+  Eigen::VectorXi re = Eigen::VectorXi(16);
+  re << pl.pop_size, pl.init_prop, pl.p_home_work, pl.social_dist,
+      pl.bed_thresh, pl.home_contacts, pl.work_contacts, pl.p_conta_contact,
+      pl.infed_period, pl.infious_period, pl.tt_symptoms, pl.p_sev_symp,
+      pl.symp_period, pl.ccu_period, pl.p_fat_sevccu, pl.p_surv_sevhome;
+  return re;
+}
+
+/**
+ * Function for testing: populate a set of DCM models with pre-calculated
+ * posteriors
+ */
+std::vector<dynamic_COVID_model> generate_comparison_data(
+    std::vector<country_data> countries) {
+  std::vector<dynamic_COVID_model> DCM(5);
+  for (int i = 0; i < 5; i++) {
+    country_data country = countries.at(i);
+    Eigen::MatrixXd response_vars =
+        Eigen::MatrixXd::Zero(country.cases.size(), 2);
+    Eigen::VectorXi select_response_vars = Eigen::VectorXi::Zero(2);
+    select_response_vars << 0, 1;
+    response_vars << country.deaths, country.cases;
+    dynamic_COVID_model& COVID_model = DCM[i];
+    COVID_model.prior_parameter_expectations = default_prior_expectations();
+    COVID_model.prior_parameter_covariances = default_prior_covariances();
+    COVID_model.prior_hyper_expectations = default_hyper_expectations();
+    COVID_model.prior_hyper_covariances = default_hyper_covariances();
+    COVID_model.parameter_locations = default_parameter_locations();
+    COVID_model.num_samples = countries.at(i).days;
+    COVID_model.select_response_vars = select_response_vars;
+    COVID_model.num_response_vars = 2;
+    COVID_model.response_vars = response_vars;
+    COVID_model.max_invert_it = 128;
+    switch (i) {
+      case (0):
+        generate_us_posteriors(COVID_model);
+        break;
+      case (1):
+        generate_brazil_posteriors(COVID_model);
+        break;
+      case (2):
+        generate_india_posteriors(COVID_model);
+        break;
+      case (3):
+        generate_russia_posteriors(COVID_model);
+        break;
+      case (4):
+        generate_mexico_posteriors(COVID_model);
+        break;
+    }
+  }
+  return DCM;
+}
+
+/**
+ * Testing function: Generate a set of posteriors for the US
+ */
+void generate_us_posteriors(dynamic_COVID_model& model) {
+  model.conditional_parameter_expectations =
+      utility::read_matrix<Eigen::MatrixXd>("../src/data/US_posterior_p_e.csv");
+  model.conditional_parameter_covariances =
+      utility::read_matrix<Eigen::MatrixXd>("../src/data/US_posterior_p_c.csv");
+  model.free_energy = -13078.8086160023;
+}
+
+/**
+ * Testing function: Generate a set of posteriors for Brazil
+ */
+void generate_brazil_posteriors(dynamic_COVID_model& model) {
+  model.conditional_parameter_expectations =
+      utility::read_matrix<Eigen::MatrixXd>(
+          "../src/data/Brazil_posterior_p_e.csv");
+  model.conditional_parameter_covariances =
+      utility::read_matrix<Eigen::MatrixXd>(
+          "../src/data/Brazil_posterior_p_c.csv");
+  model.free_energy = -11168.27719900757;
+}
+
+/**
+ * Testing function: Generate a set of posteriors for India
+ */
+void generate_india_posteriors(dynamic_COVID_model& model) {
+  model.conditional_parameter_expectations =
+      utility::read_matrix<Eigen::MatrixXd>(
+          "../src/data/India_posterior_p_e.csv");
+  model.conditional_parameter_covariances =
+      utility::read_matrix<Eigen::MatrixXd>(
+          "../src/data/India_posterior_p_c.csv");
+  model.free_energy = -12787.05479209196;
+}
+
+/**
+ * Testing function: Generate a set of posteriors for Russia
+ */
+void generate_russia_posteriors(dynamic_COVID_model& model) {
+  model.conditional_parameter_expectations =
+      utility::read_matrix<Eigen::MatrixXd>(
+          "../src/data/Russia_posterior_p_e.csv");
+  model.conditional_parameter_covariances =
+      utility::read_matrix<Eigen::MatrixXd>(
+          "../src/data/Russia_posterior_p_c.csv");
+  model.free_energy = -11030.47769917933;
+}
+
+/**
+ * Testing function: Generate a set of posteriors for Mexico
+ */
+void generate_mexico_posteriors(dynamic_COVID_model& model) {
+  model.conditional_parameter_expectations =
+      utility::read_matrix<Eigen::MatrixXd>(
+          "../src/data/Mexico_posterior_p_e.csv");
+  model.conditional_parameter_covariances =
+      utility::read_matrix<Eigen::MatrixXd>(
+          "../src/data/Mexico_posterior_p_c.csv");
+  model.free_energy = -9700.687071574801;
+}
+
+/**
+ * Testing function: Populate a PEB model with pre-calculated values
+ */
+void generate_PEB_values(peb_model<dynamic_COVID_model>& model) {
+  model.prior_parameter_expectations =
+      utility::read_matrix<Eigen::MatrixXd>("../src/data/peb_prior_p_e.csv");
+  model.prior_parameter_covariances =
+      utility::read_matrix<Eigen::MatrixXd>("../src/data/peb_prior_p_c.csv");
+  model.conditional_parameter_expectations =
+      utility::read_matrix<Eigen::MatrixXd>(
+          "../src/data/peb_posterior_p_e.csv");
+  model.conditional_parameter_covariances =
+      utility::read_matrix<Eigen::MatrixXd>(
+          "../src/data/peb_posterior_p_c.csv");
 }

@@ -87,7 +87,6 @@ int run_COVID_test() {
     GCM = generate_comparison_data(countries);
   }
 
-
   // Set up 3rd level design matricies
 
   Eigen::VectorXd lat = Eigen::VectorXd(num_countries);
@@ -125,11 +124,15 @@ int run_COVID_test() {
   PEB.max_invert_it = 64;
   PEB.invert_model();
 
-  std::cout << "PEB.prior_parameter_expectations" << PEB.prior_parameter_expectations << '\n';
-  std::cout << "PEB.posterior_parameter_expectations" << PEB.conditional_parameter_expectations << '\n';
+  std::cout << "PEB.prior_parameter_expectations"
+            << PEB.prior_parameter_expectations << '\n';
+  std::cout << "PEB.posterior_parameter_expectations"
+            << PEB.conditional_parameter_expectations << '\n';
   generate_PEB_values(PEB);
-  std::cout << "PEB.prior_parameter_expectations" << PEB.prior_parameter_expectations << '\n';
-  std::cout << "PEB.posterior_parameter_expectations" << PEB.conditional_parameter_expectations << '\n';
+  std::cout << "PEB.prior_parameter_expectations"
+            << PEB.prior_parameter_expectations << '\n';
+  std::cout << "PEB.posterior_parameter_expectations"
+            << PEB.conditional_parameter_expectations << '\n';
 
   bmr_model<peb_model<dynamic_COVID_model>> BMR;
   BMR.DCM_in = PEB;
@@ -340,12 +343,10 @@ std::vector<dynamic_COVID_model> generate_comparison_data(
  */
 void generate_us_posteriors(dynamic_COVID_model& model) {
   model.conditional_parameter_expectations =
-      utility::read_matrix<Eigen::MatrixXd>(
-          "../src/data/US_posterior_p_e.csv");
+      utility::read_matrix<Eigen::MatrixXd>("../src/data/US_posterior_p_e.csv");
   model.conditional_parameter_covariances =
-      utility::read_matrix<Eigen::MatrixXd>(
-          "../src/data/US_posterior_p_c.csv");
-  model.free_energy = -11263.38592908148;
+      utility::read_matrix<Eigen::MatrixXd>("../src/data/US_posterior_p_c.csv");
+  model.free_energy = -13078.8086160023;
 }
 
 /**
@@ -358,7 +359,7 @@ void generate_brazil_posteriors(dynamic_COVID_model& model) {
   model.conditional_parameter_covariances =
       utility::read_matrix<Eigen::MatrixXd>(
           "../src/data/Brazil_posterior_p_c.csv");
-  model.free_energy = -9205.455950138792;
+  model.free_energy = -11168.27719900757;
 }
 
 /**
@@ -371,7 +372,7 @@ void generate_india_posteriors(dynamic_COVID_model& model) {
   model.conditional_parameter_covariances =
       utility::read_matrix<Eigen::MatrixXd>(
           "../src/data/India_posterior_p_c.csv");
-  model.free_energy = -10481.23075593396;
+  model.free_energy = -12787.05479209196;
 }
 
 /**
@@ -384,7 +385,7 @@ void generate_russia_posteriors(dynamic_COVID_model& model) {
   model.conditional_parameter_covariances =
       utility::read_matrix<Eigen::MatrixXd>(
           "../src/data/Russia_posterior_p_c.csv");
-  model.free_energy = -8396.914141674371;
+  model.free_energy = -11030.47769917933;
 }
 
 /**
@@ -397,17 +398,17 @@ void generate_mexico_posteriors(dynamic_COVID_model& model) {
   model.conditional_parameter_covariances =
       utility::read_matrix<Eigen::MatrixXd>(
           "../src/data/Mexico_posterior_p_c.csv");
-  model.free_energy = -7379.296952775237;
+  model.free_energy = -9700.687071574801;
 }
 
 /**
  * Testing function: Populate a PEB model with pre-calculated values
  */
 void generate_PEB_values(peb_model<dynamic_COVID_model>& model) {
-  model.prior_parameter_expectations = utility::read_matrix<Eigen::MatrixXd>(
-      "../src/data/peb_prior_p_e.csv");
-  model.prior_parameter_covariances = utility::read_matrix<Eigen::MatrixXd>(
-      "../src/data/peb_prior_p_c.csv");
+  model.prior_parameter_expectations =
+      utility::read_matrix<Eigen::MatrixXd>("../src/data/peb_prior_p_e.csv");
+  model.prior_parameter_covariances =
+      utility::read_matrix<Eigen::MatrixXd>("../src/data/peb_prior_p_c.csv");
   model.conditional_parameter_expectations =
       utility::read_matrix<Eigen::MatrixXd>(
           "../src/data/peb_posterior_p_e.csv");
