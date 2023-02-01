@@ -186,7 +186,6 @@ TEST(dynamic_COVID_model_test, peb) {
  * should be fairly similar.
  */
 TEST(dynamic_COVID_model_test, inversion) {
-  exit(1);
   int num_countries = 5;
   std::vector<dynamic_COVID_model> GCM;
   std::vector<country_data> countries = read_country_data(num_countries);
