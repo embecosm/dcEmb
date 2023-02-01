@@ -372,9 +372,6 @@ class peb_model : public dynamic_model {
       prior_e_p_c = utility::inverse_tol(prior_e_p_c);
 
       Eigen::VectorXd prior_e_p_e = GCM.at(i).prior_parameter_expectations;
-      //   std::cout << "perDCM_prior_r_p_e[i]" << perDCM_prior_r_p_e[i] <<
-      //   '\n'; std::cout << "GCM.at(i).prior_parameter_expectations"
-      //             << GCM.at(i).prior_parameter_expectations << '\n';
       prior_e_p_e(this->random_effects) = singular_vec * perDCM_prior_r_p_e[i];
 
       Eigen::MatrixXd tmp_prior_p_c =

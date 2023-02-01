@@ -124,15 +124,8 @@ int run_COVID_test() {
   PEB.max_invert_it = 64;
   PEB.invert_model();
 
-  std::cout << "PEB.prior_parameter_expectations"
-            << PEB.prior_parameter_expectations << '\n';
-  std::cout << "PEB.posterior_parameter_expectations"
-            << PEB.conditional_parameter_expectations << '\n';
   generate_PEB_values(PEB);
-  std::cout << "PEB.prior_parameter_expectations"
-            << PEB.prior_parameter_expectations << '\n';
-  std::cout << "PEB.posterior_parameter_expectations"
-            << PEB.conditional_parameter_expectations << '\n';
+
 
   bmr_model<peb_model<dynamic_COVID_model>> BMR;
   BMR.DCM_in = PEB;
