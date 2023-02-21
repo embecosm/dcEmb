@@ -18,7 +18,7 @@
 # -- Project information -----------------------------------------------------
 
 project = 'dcEmb'
-copyright = '2022, William Jones'
+copyright = '2023, Embecosm'
 author = 'William Jones'
 
 # The full version, including alpha/beta/rc tags

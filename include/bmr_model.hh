@@ -147,7 +147,6 @@ class bmr_model {
           Eigen::VectorXi s = r.unaryExpr([](int x) { return (1 - x); });
           Eigen::MatrixXd red_c_tmp1 =
               Eigen::MatrixXd::Zero(r.size(), r.size());
-          // std::cout << "nparams" << nparams << '\n';
 
           red_c_tmp1.diagonal() = (r.cast<double>() + s.cast<double>() * gamma);
           Eigen::MatrixXd red_c_tmp2 =

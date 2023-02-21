@@ -61,7 +61,6 @@ double utility::logdet(const Eigen::MatrixXd& mat) {
     return pos_eig_values.sum();
   } else {
     Eigen::BDCSVD<Eigen::MatrixXd> svd;
-    svd.setThreshold(tol);
     svd.compute(mat, Eigen::HouseholderQRPreconditioner | Eigen::ComputeThinV | Eigen::ComputeThinU);
     Eigen::VectorXd singular_values = svd.singularValues();
     Eigen::VectorXd log_singular_values =
@@ -389,9 +388,8 @@ Eigen::MatrixXd utility::inverse_tol(const Eigen::MatrixXd& mat,
     ret_mat.diagonal() =
         ret_mat.diagonal().unaryExpr([](double x) { return (1 / x); });
   } else {
-    ret_mat = ret_mat.inverse();
+    ret_mat = ret_mat.inverse().eval();
   }
-
   return ret_mat;
 }
 

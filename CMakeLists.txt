@@ -32,6 +32,7 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/include/COVID
     ${CMAKE_SOURCE_DIR}/include/3body
+    ${CMAKE_SOURCE_DIR}/include/weather
     ${CMAKE_SOURCE_DIR}/include/tests
     ${gtest_SOURCE_DIR}/include
     ${gtest_SOURCE_DIR}
@@ -51,6 +52,14 @@ set(SOURCES_3BODY
     src/3body/run_3body_dcm.cc
     src/3body/DEM_3body.cc
     src/3body/dynamic_3body_model.cc
+    src/utility.cc
+)
+
+set(SOURCES_WEATHER
+    src/dynamic_model.cc
+    src/weather/run_weather_dcm.cc
+    src/weather/DEM_weather.cc
+    src/weather/dynamic_weather_model.cc
     src/utility.cc
 )
 
@@ -81,21 +90,29 @@ set(SOURCES_SERIALIZATION_TESTS
     tests/serialization_test.cc
 )
 
-# add_executable(dcm_covid ${SOURCES_COVID})
+add_executable(dcm_covid ${SOURCES_COVID})
 
-# if(OpenMP_FOUND)
-#     target_link_libraries(dcm_covid PUBLIC OpenMP::OpenMP_CXX)
-# endif(OpenMP_FOUND)
+if(OpenMP_FOUND)
+    target_link_libraries(dcm_covid PUBLIC OpenMP::OpenMP_CXX)
+endif(OpenMP_FOUND)
 
-# set_target_properties(dcm_covid PROPERTIES COMPILE_FLAGS "")
+set_target_properties(dcm_covid PROPERTIES COMPILE_FLAGS "")
 
-# add_executable(dcm_3body ${SOURCES_3BODY})
+add_executable(dcm_3body ${SOURCES_3BODY})
 
-# if(OpenMP_FOUND)
-#     target_link_libraries(dcm_3body PUBLIC OpenMP::OpenMP_CXX)
-# endif(OpenMP_FOUND)
+if(OpenMP_FOUND)
+    target_link_libraries(dcm_3body PUBLIC OpenMP::OpenMP_CXX)
+endif(OpenMP_FOUND)
 
-# set_target_properties(dcm_3body PROPERTIES COMPILE_FLAGS "")
+set_target_properties(dcm_3body PROPERTIES COMPILE_FLAGS "")
+
+add_executable(dcm_weather ${SOURCES_WEATHER})
+
+if(OpenMP_FOUND)
+    target_link_libraries(dcm_weather PUBLIC OpenMP::OpenMP_CXX)
+endif(OpenMP_FOUND)
+
+set_target_properties(dcm_weather PROPERTIES COMPILE_FLAGS "")
 
 add_executable(run_tests ${SOURCES_TESTS})
 
@@ -115,11 +132,11 @@ endif(OpenMP_FOUND)
 target_link_libraries(run_tests_long PUBLIC gtest_main)
 set_target_properties(run_tests_long PROPERTIES COMPILE_FLAGS "")
 
-# add_executable(run_serialization_tests ${SOURCES_SERIALIZATION_TESTS})
+add_executable(run_serialization_tests ${SOURCES_SERIALIZATION_TESTS})
 
-# if(OpenMP_FOUND)
-#     target_link_libraries(run_serialization_tests PUBLIC OpenMP::OpenMP_CXX)
-# endif(OpenMP_FOUND)
+if(OpenMP_FOUND)
+    target_link_libraries(run_serialization_tests PUBLIC OpenMP::OpenMP_CXX)
+endif(OpenMP_FOUND)
 
-# target_link_libraries(run_serialization_tests PUBLIC gtest_main)
-# set_target_properties(run_serialization_tests PROPERTIES COMPILE_FLAGS "")
+target_link_libraries(run_serialization_tests PUBLIC gtest_main)
+set_target_properties(run_serialization_tests PROPERTIES COMPILE_FLAGS "")
