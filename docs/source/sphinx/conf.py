@@ -30,8 +30,12 @@ release = 'v0.1.0'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    "breathe"
 ]
 
+breathe_projects = {"DCM": "@CMAKE_CURRENT_SOURCE_DIR@/docs/source/doxygen/xml"}
+
+breathe_default_project = "DCM"
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
@@ -52,9 +56,9 @@ html_sidebars = {
    '**': ['globaltoc.html', 'sourcelink.html', 'searchbox.html'],
 }
 
-html_static_path = ['_static']
+html_static_path = ['@CMAKE_CURRENT_SOURCE_DIR@/doc/source/sphinx/source/_static']
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_theme_path = ["_themes"]
+html_theme_path = ["@CMAKE_CURRENT_SOURCE_DIR@/doc/source/sphinx/source/_themes"]

@@ -5,3 +5,7 @@ src/out_*
 src/Octave/*
 *.vscode
 build/*
+docs/*
+!docs/source
+visualisation/*.csv
+visualisation/*.mp4
