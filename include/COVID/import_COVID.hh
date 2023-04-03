@@ -27,6 +27,3 @@ Eigen::MatrixXd mat_power(const Eigen::MatrixXd& mat, int p);
 
 Eigen::VectorXd zero_padded_add(const Eigen::VectorXd& mat1,
                                 const Eigen::VectorXd& mat2);
-
-void splitstr(std::vector<std::string>& vec, std::string& str,
-              const char& delim);

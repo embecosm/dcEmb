@@ -1,0 +1,1 @@
+dynamic_weather_model define_minimal_weather_model();

@@ -16,6 +16,7 @@
 #include <bitset>
 #include <functional>
 #include <iostream>
+#include <sstream>
 #include <unsupported/Eigen/MatrixFunctions>
 #include "Eigen/Core"
 
@@ -61,7 +62,8 @@ double utility::logdet(const Eigen::MatrixXd& mat) {
     return pos_eig_values.sum();
   } else {
     Eigen::BDCSVD<Eigen::MatrixXd> svd;
-    svd.compute(mat, Eigen::HouseholderQRPreconditioner | Eigen::ComputeThinV | Eigen::ComputeThinU);
+    svd.compute(mat, Eigen::HouseholderQRPreconditioner | Eigen::ComputeThinV |
+                         Eigen::ComputeThinU);
     Eigen::VectorXd singular_values = svd.singularValues();
     Eigen::VectorXd log_singular_values =
         singular_values.unaryExpr([tol](double x) {
@@ -441,4 +443,81 @@ double utility::SparseProductTrace(const SparseMD& in1, const SparseMD& in2) {
     trace += A.row(i).dot(B.col(i));
   }
   return trace;
+}
+
+/**
+ * Split a string around a token
+ */
+void utility::splitstr(std::vector<std::string>& vec, std::string& str,
+                       const char& delim) {
+  std::stringstream ss(str);
+  std::string line;
+  while (std::getline(ss, line, delim)) {
+    vec.push_back(line);
+  }
+  return;
+}
+
+species_struct utility::species_from_string(std::string& string) {
+  species_struct species;
+  std::vector<std::string> properties;
+  utility::splitstr(properties, string, ',');
+
+  species.name = properties[0];
+  species.type = properties[1];
+  species.input_mode = properties[2];
+  species.greenhouse_gas = stoi(properties[3]);
+  species.aerosol_chemistry_from_emissions = stoi(properties[4]);
+  species.aerosol_chemistry_from_concentration = stoi(properties[5]);
+  species.partition_fraction << stod(properties[6]), stod(properties[7]),
+      stod(properties[8]), stod(properties[9]);
+  species.unperturbed_lifetime << stod(properties[10]), stod(properties[11]),
+      stod(properties[12]), stod(properties[13]);
+  species.tropospheric_adjustment = stod(properties[14]);
+  species.forcing_efficacy = stod(properties[15]);
+  species.forcing_temperature_feedback = stod(properties[16]);
+  species.forcing_scale = stod(properties[17]);
+  species.molecular_weight = stod(properties[18]);
+  species.baseline_concentration = stod(properties[19]);
+  species.forcing_reference_concentration = stod(properties[20]);
+  species.forcing_reference_emissions = stod(properties[21]);
+  species.iirf_0 = stod(properties[22]);
+  species.iirf_airborne = stod(properties[23]);
+  species.iirf_uptake = stod(properties[24]);
+  species.iirf_temperature = stod(properties[25]);
+  species.baseline_emissions = stod(properties[26]);
+  species.g1 = stod(properties[27]);
+  species.g0 = stod(properties[28]);
+  species.greenhouse_gas_radiative_efficiency = stod(properties[29]);
+  species.contrails_radiative_efficiency = stod(properties[30]);
+  species.erfari_radiative_efficiency = stod(properties[31]);
+  species.h2o_stratospheric_factor = stod(properties[32]);
+  species.lapsi_radiative_efficiency = stod(properties[33]);
+  species.land_use_cumulative_emissions_to_forcing = stod(properties[34]);
+  species.ozone_radiative_efficiency = stod(properties[35]);
+  species.cl_atoms = stod(properties[36]);
+  species.br_atoms = stod(properties[37]);
+  species.fractional_release = stod(properties[38]);
+  species.aci_shape = stod(properties[39]);
+  species.aci_scale = stod(properties[40]);
+  species.ch4_lifetime_chemical_sensitivity = stod(properties[41]);
+  species.lifetime_temperature_sensitivity = stod(properties[42]);
+  return species;
+}
+
+std::vector<species_struct> utility::species_from_file(
+    std::string& filename, std::vector<std::string>& names) {
+  std::vector<species_struct> species_list;
+  std::string species_line;
+  std::ifstream species_file;
+  species_file.open(filename);
+  while (std::getline(species_file, species_line)) {
+    std::vector<std::string> species_split;
+    utility::splitstr(species_split, species_line, ',');
+    if (std::find(names.begin(), names.end(), species_split[0]) !=
+        names.end()) {
+      species_list.push_back(utility::species_from_string(species_line));
+    }
+  }
+  return species_list;
 }

@@ -24,6 +24,7 @@
 #include "Eigen/Dense"
 #include "Eigen/Sparse"
 #include "country_data.hh"
+#include "utility.hh"
 
 /**
  * Extract data from raw text files, and put into a vector of country_data
@@ -42,15 +43,15 @@ std::vector<country_data> read_country_data(int num_countries) {
   std::getline(cases_file, cases_line);
   std::getline(deaths_file, deaths_line);
   std::vector<std::string> date_list;
-  splitstr(date_list, cases_line, ',');
+  utility::splitstr(date_list, cases_line, ',');
   while (std::getline(cases_file, cases_line)) {
     std::getline(deaths_file, deaths_line);
 
     std::vector<std::string> cases_split_tmp;
     std::vector<std::string> deaths_split_tmp;
     country_data country_tmp;
-    splitstr(cases_split_tmp, cases_line, ',');
-    splitstr(deaths_split_tmp, deaths_line, ',');
+    utility::splitstr(cases_split_tmp, cases_line, ',');
+    utility::splitstr(deaths_split_tmp, deaths_line, ',');
     int first_case = 4;
     // First case is when cases are > 1 for parity with DCM for COVID example
     // Should probably be >= 1
@@ -130,7 +131,7 @@ int get_country_pop(const std::string &name) {
   std::string pop_line;
   while (std::getline(pop_file, pop_line)) {
     std::vector<std::string> pop_split_tmp;
-    splitstr(pop_split_tmp, pop_line, ',');
+    utility::splitstr(pop_split_tmp, pop_line, ',');
     if (pop_split_tmp.at(0) == name) {
       return stoi(pop_split_tmp.at(1)) * 1000;
     }
@@ -218,17 +219,4 @@ Eigen::VectorXd zero_padded_add(const Eigen::VectorXd &mat1,
     tmp_vector << Eigen::VectorXd::Zero(mat1.size() - mat2.size()), mat2;
     return tmp_vector + mat1;
   }
-}
-
-/**
- * Split a string around a token
- */
-void splitstr(std::vector<std::string> &vec, std::string &str,
-              const char &delim) {
-  std::stringstream ss(str);
-  std::string line;
-  while (std::getline(ss, line, delim)) {
-    vec.push_back(line);
-  }
-  return;
 }

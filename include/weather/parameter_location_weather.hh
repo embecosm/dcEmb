@@ -17,10 +17,11 @@
 #include <iostream>
 #pragma once
 struct parameter_location_weather {
-
+  std::vector<std::string> names;
+  std::vector<int> locations;
 };
 
 inline bool operator==(const parameter_location_weather& lhs,
                        const parameter_location_weather& rhs) {
-  return 0;
+  return lhs.names == rhs.names & lhs.locations == rhs.locations;
 }

@@ -14,6 +14,7 @@
 #include <vector>
 #include "dynamic_model.hh"
 #include "parameter_location_weather.hh"
+#include "species_struct.hh"
 #pragma once
 
 /**
@@ -22,11 +23,15 @@
 class dynamic_weather_model : public dynamic_model {
  public:
   /**
-   * @brief parameter locations for COVID-19
+   * @brief metadata containing the names and indexes of parameters in the
+   * parameter array, so parameters can be referenced by name for clarity
    */
   parameter_location_weather parameter_locations;
-  int num_bodies = 3;
-  double G = 1;
+  std::vector<species_struct> species_list;
+  Eigen::VectorXi co2_indices;
+  Eigen::VectorXi ch4_indices;
+  Eigen::VectorXi n2o_indices;
+  Eigen::VectorXi other_indices;
   Eigen::VectorXd get_observed_outcomes();
   std::function<Eigen::VectorXd(Eigen::VectorXd)> get_forward_model_function();
   Eigen::VectorXd forward_model(
@@ -43,6 +48,14 @@ class dynamic_weather_model : public dynamic_model {
       const parameter_location_weather& parameter_locations,
       const int& timeseries_length,
       const Eigen::VectorXi& select_response_vars);
+Eigen::VectorXd meinshausen(
+      const Eigen::VectorXd& concentration,
+      const Eigen::VectorXd& reference_concentration,
+      const Eigen::VectorXd& forcing_scaling,
+      const Eigen::VectorXd& radiative_efficiency,
+      const Eigen::VectorXi& co2_indices, const Eigen::VectorXi& ch4_indices,
+      const Eigen::VectorXi& n2o_indices,
+      const Eigen::VectorXi& minor_greenhouse_gas_indices);
   dynamic_weather_model();
 };
 

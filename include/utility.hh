@@ -17,6 +17,7 @@
 #include <functional>
 #include <iostream>
 #include <random>
+#include "species_struct.hh"
 
 #define SparseMD Eigen::SparseMatrix<double>
 #define SparseVD Eigen::SparseVector<double>
@@ -36,8 +37,8 @@ SparseMD permute_kron_matrix(const SparseMD& matrix,
                              const Eigen::VectorXi& cur_order_size);
 
 SparseMD calc_permuted_kron_identity_product(
-    const int& id_size, const SparseMD& matrix, const Eigen::VectorXi& new_order,
-    const Eigen::VectorXi& cur_order_size);
+    const int& id_size, const SparseMD& matrix,
+    const Eigen::VectorXi& new_order, const Eigen::VectorXi& cur_order_size);
 /*
  * Given a multidimensional matrix represented in block matrix form, give the
  * position in the block matrix from a multidimeional matrix coordinate
@@ -88,7 +89,8 @@ Derived softmax(const Eigen::MatrixBase<Derived>& mat) {
     throw std::runtime_error("vector values too large");
     return Derived::Zero(1);
   }
-  return mat_norm.unaryExpr([exp_mat_sum](T x) { return (exp(x) / exp_mat_sum); });
+  return mat_norm.unaryExpr(
+      [exp_mat_sum](T x) { return (exp(x) / exp_mat_sum); });
 }
 
 /**
@@ -215,5 +217,10 @@ Derived gradient(const Derived& vec) {
 
 double SparseTrace(const SparseMD& A);
 double SparseProductTrace(const SparseMD& A, const SparseMD& B);
+void splitstr(std::vector<std::string>& vec, std::string& str,
+              const char& delim);
 
+species_struct species_from_string(std::string& string);
+std::vector<species_struct> species_from_file(
+    std::string& filename, std::vector<std::string>& names);
 }  // namespace utility

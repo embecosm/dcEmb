@@ -13,6 +13,7 @@
 
 #include "Eigen/Dense"
 #include "parameter_location_weather.hh"
+#include "species_struct.hh"
 #pragma once
 
 int run_weather_test();

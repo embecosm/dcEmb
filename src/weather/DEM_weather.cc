@@ -20,6 +20,7 @@
 #include "bmr_model.hh"
 #include "country_data.hh"
 #include "dynamic_weather_model.hh"
+#include "species_struct.hh"
 #include "utility.hh"
 
 /**
@@ -27,45 +28,7 @@
  */
 int run_weather_test() {
   dynamic_weather_model model;
-  model.prior_parameter_expectations = default_prior_expectations();
-  model.prior_parameter_covariances = default_prior_covariances();
-  model.prior_hyper_expectations = default_hyper_expectations();
-  model.prior_hyper_covariances = default_hyper_covariances();
-  model.parameter_locations = default_parameter_locations();
-  model.num_samples = 1000;
-  model.num_response_vars = 3;
 
-  Eigen::MatrixXd out1 =
-      model.eval_generative(true_prior_expectations(),
-                            model.parameter_locations, model.num_samples);
-  utility::print_matrix("../visualisation/true_generative.csv", out1);
-  Eigen::MatrixXd response_vars =
-      Eigen::MatrixXd::Zero(model.num_samples, model.num_response_vars);
-  Eigen::VectorXi select_response_vars =
-      Eigen::VectorXi::Zero(model.num_response_vars);
-  select_response_vars << 1, 2, 3;
-  response_vars = out1(Eigen::all, select_response_vars);
-  model.select_response_vars = select_response_vars;
-  model.response_vars = response_vars;
-  model.num_bodies = 3;
-
-  model.invert_model();
-  Eigen::MatrixXd out2 =
-      model.eval_generative(model.conditional_parameter_expectations,
-                            model.parameter_locations, model.num_samples);
-  utility::print_matrix("../visualisation/deriv_generative.csv", out2);
-  Eigen::MatrixXd out3 =
-      model.eval_generative(default_prior_expectations(),
-                            model.parameter_locations, model.num_samples);
-  utility::print_matrix("../visualisation/org_generative.csv", out3);
-
-  bmr_model<dynamic_weather_model> BMR;
-  BMR.DCM_in = model;
-  BMR.reduce();
-  Eigen::MatrixXd out4 = model.eval_generative(
-      BMR.DCM_out.conditional_parameter_expectations,
-      BMR.DCM_out.parameter_locations, BMR.DCM_out.num_samples);
-  utility::print_matrix("../visualisation/deriv2_generative.csv", out4);
   return 0;
 }
 
@@ -94,14 +57,14 @@ Eigen::VectorXd true_prior_expectations() {
  */
 Eigen::VectorXd default_prior_expectations() {
   Eigen::MatrixXd default_prior_expectation = Eigen::MatrixXd::Zero(7, 3);
-  double x =  0.04;
+  double x = 0.04;
   default_prior_expectation.row(0) << 1 - x, 1 + x, 1 + x;
   default_prior_expectation.row(1) << 0.97000436 + x, -0.97000436 - x, 0 + x;
   default_prior_expectation.row(2) << -0.24308753 + x, 0.24308753 + x, 0 - x;
   default_prior_expectation.row(3) << 0 + x, 0 + x, 0 - x;
-  default_prior_expectation.row(4) << 0.93240737 / 2  + x, 0.93240737 / 2 - x,
+  default_prior_expectation.row(4) << 0.93240737 / 2 + x, 0.93240737 / 2 - x,
       -0.93240737 + x;
-  default_prior_expectation.row(5) << 0.86473146 / 2  + x, 0.86473146 / 2 - x,
+  default_prior_expectation.row(5) << 0.86473146 / 2 + x, 0.86473146 / 2 - x,
       -0.86473146 - x;
   default_prior_expectation.row(6) << 0 + x, 0 - x, 0 + x;
   Eigen::Map<Eigen::VectorXd> return_default_prior_expectation(
