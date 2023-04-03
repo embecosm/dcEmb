@@ -1,0 +1,5 @@
+F: 0 dF predicted: 2790.66 actual: 30369.5 microsec: 27830962
+F: 30369.5 dF predicted: 218.621 actual: 284.653 microsec: 27844505
+F: 30654.1 dF predicted: 554.812 actual: 904.421 microsec: 27700989
+F: 31558.5 dF predicted: 316.241 actual: 199.329 microsec: 27848216
+F: 31757.9 dF predicted: 164.755 (base)
