@@ -448,7 +448,7 @@ double utility::SparseProductTrace(const SparseMD& in1, const SparseMD& in2) {
 /**
  * Split a string around a token
  */
-void utility::splitstr(std::vector<std::string>& vec, std::string& str,
+void utility::splitstr(std::vector<std::string>& vec, const std::string& str,
                        const char& delim) {
   std::stringstream ss(str);
   std::string line;
@@ -458,8 +458,8 @@ void utility::splitstr(std::vector<std::string>& vec, std::string& str,
   return;
 }
 
-species_struct utility::species_from_string(std::string& string) {
-  species_struct species;
+species utility::species_from_string(const std::string& string) {
+  species species;
   std::vector<std::string> properties;
   utility::splitstr(properties, string, ',');
 
@@ -505,9 +505,9 @@ species_struct utility::species_from_string(std::string& string) {
   return species;
 }
 
-std::vector<species_struct> utility::species_from_file(
-    std::string& filename, std::vector<std::string>& names) {
-  std::vector<species_struct> species_list;
+species_struct utility::species_from_file(
+    const std::string& filename, const std::vector<std::string>& names) {
+  std::vector<species> species_list;
   std::string species_line;
   std::ifstream species_file;
   species_file.open(filename);
@@ -519,5 +519,71 @@ std::vector<species_struct> utility::species_from_file(
       species_list.push_back(utility::species_from_string(species_line));
     }
   }
-  return species_list;
+
+  return utility::species_list_to_struct(species_list);
+}
+
+species_struct utility::species_list_to_struct(
+    const std::vector<species>& species_list) {
+  species_struct species_struct(species_list.size());
+  for (int i = 0; i < species_list.size(); i++) {
+    species_struct.name[i] = species_list[i].name;
+    species_struct.type[i] = species_list[i].type;
+    species_struct.input_mode[i] = species_list[i].input_mode;
+    species_struct.greenhouse_gas(i) = species_list[i].greenhouse_gas;
+    species_struct.aerosol_chemistry_from_emissions(i) =
+        species_list[i].aerosol_chemistry_from_emissions;
+    species_struct.aerosol_chemistry_from_concentration(i) =
+        species_list[i].aerosol_chemistry_from_concentration;
+    species_struct.partition_fraction.col(i) =
+        species_list[i].partition_fraction;
+    species_struct.unperturbed_lifetime.col(i) =
+        species_list[i].unperturbed_lifetime;
+    species_struct.tropospheric_adjustment(i) =
+        species_list[i].tropospheric_adjustment;
+    species_struct.forcing_efficacy(i) = species_list[i].forcing_efficacy;
+    species_struct.forcing_temperature_feedback(i) =
+        species_list[i].forcing_temperature_feedback;
+    species_struct.forcing_scale(i) = species_list[i].forcing_scale;
+    species_struct.molecular_weight(i) = species_list[i].molecular_weight;
+    species_struct.baseline_concentration(i) =
+        species_list[i].baseline_concentration;
+    species_struct.forcing_reference_concentration(i) =
+        species_list[i].forcing_reference_concentration;
+    species_struct.forcing_reference_emissions(i) =
+        species_list[i].forcing_reference_emissions;
+    species_struct.iirf_0(i) = species_list[i].iirf_0;
+    species_struct.iirf_airborne(i) = species_list[i].iirf_airborne;
+    species_struct.iirf_uptake(i) = species_list[i].iirf_uptake;
+    species_struct.iirf_temperature(i) = species_list[i].iirf_temperature;
+    species_struct.baseline_emissions(i) = species_list[i].baseline_emissions;
+    species_struct.g1(i) = species_list[i].g1;
+    species_struct.g0(i) = species_list[i].g0;
+    species_struct.greenhouse_gas_radiative_efficiency(i) =
+        species_list[i].greenhouse_gas_radiative_efficiency;
+    species_struct.contrails_radiative_efficiency(i) =
+        species_list[i].contrails_radiative_efficiency;
+    species_struct.erfari_radiative_efficiency(i) =
+        species_list[i].erfari_radiative_efficiency;
+    species_struct.h2o_stratospheric_factor(i) =
+        species_list[i].h2o_stratospheric_factor;
+    species_struct.lapsi_radiative_efficiency(i) =
+        species_list[i].lapsi_radiative_efficiency;
+    species_struct.land_use_cumulative_emissions_to_forcing(i) =
+        species_list[i].land_use_cumulative_emissions_to_forcing;
+    species_struct.ozone_radiative_efficiency(i) =
+        species_list[i].ozone_radiative_efficiency;
+    species_struct.cl_atoms(i) = species_list[i].cl_atoms;
+    species_struct.br_atoms(i) = species_list[i].br_atoms;
+    species_struct.fractional_release(i) = species_list[i].fractional_release;
+    species_struct.ch4_lifetime_chemical_sensitivity(i) =
+        species_list[i].ch4_lifetime_chemical_sensitivity;
+    species_struct.aci_shape(i) = species_list[i].aci_shape;
+    species_struct.aci_scale(i) = species_list[i].aci_scale;
+    species_struct.lifetime_temperature_sensitivity(i) =
+        species_list[i].lifetime_temperature_sensitivity;
+    species_struct.concentration_per_emission(i) =
+        species_list[i].concentration_per_emission;
+  }
+  return species_struct;
 }

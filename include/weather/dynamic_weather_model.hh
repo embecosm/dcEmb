@@ -27,7 +27,7 @@ class dynamic_weather_model : public dynamic_model {
    * parameter array, so parameters can be referenced by name for clarity
    */
   parameter_location_weather parameter_locations;
-  std::vector<species_struct> species_list;
+  species_struct species_list;
   Eigen::VectorXi co2_indices;
   Eigen::VectorXi ch4_indices;
   Eigen::VectorXi n2o_indices;
