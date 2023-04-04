@@ -48,7 +48,7 @@ class dynamic_weather_model : public dynamic_model {
       const parameter_location_weather& parameter_locations,
       const int& timeseries_length,
       const Eigen::VectorXi& select_response_vars);
-Eigen::VectorXd meinshausen(
+  Eigen::VectorXd meinshausen(
       const Eigen::VectorXd& concentration,
       const Eigen::VectorXd& reference_concentration,
       const Eigen::VectorXd& forcing_scaling,
@@ -56,6 +56,16 @@ Eigen::VectorXd meinshausen(
       const Eigen::VectorXi& co2_indices, const Eigen::VectorXi& ch4_indices,
       const Eigen::VectorXi& n2o_indices,
       const Eigen::VectorXi& minor_greenhouse_gas_indices);
+  Eigen::VectorXd calculate_alpha(const Eigen::VectorXd& airborne_emissions,
+                                  const Eigen::VectorXd& cumulative_emissions,
+                                  const Eigen::VectorXd& g0,
+                                  const Eigen::VectorXd& g1,
+                                  const Eigen::VectorXd& iirf_0,
+                                  const Eigen::VectorXd& iirf_airborne,
+                                  const Eigen::VectorXd& iirf_temperature,
+                                  const Eigen::VectorXd& iirf_uptake,
+                                  const Eigen::VectorXd& cummins_state_array,
+                                  double iirf_max);
   dynamic_weather_model();
 };
 

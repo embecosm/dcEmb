@@ -196,6 +196,56 @@ TEST(meinshausen, unit) {
   }
 }
 
+TEST(calculate_alpha, unit) {
+  dynamic_weather_model model = define_minimal_weather_model();
+
+  Eigen::VectorXd forcing_array(3);
+  forcing_array << 0, 0, 0;
+  Eigen::VectorXd temperature(3);
+  temperature << 0, 0, 0;
+  Eigen::VectorXd cummins_state_array(3);
+  cummins_state_array << 0,0,0;
+
+  // airborne emissions
+  // cululative_emissions
+  // iirf_max
+  // cumins_state_array
+  Eigen::VectorXd airborne_emissions(3);
+  airborne_emissions << 0, 0, 0;
+  Eigen::VectorXd cumulative_emissions(3);
+  cumulative_emissions << 0, 0, 0;
+  Eigen::VectorXd ghg_forcing_t0 = model.calculate_alpha(
+      airborne_emissions, cumulative_emissions, model.species_list.g0,
+      model.species_list.g1, model.species_list.iirf_0,
+      model.species_list.iirf_airborne, model.species_list.iirf_temperature,
+      model.species_list.iirf_uptake, cummins_state_array, 100);
+
+  Eigen::VectorXd expected_t0(3);
+  expected_t0 << 0.1291924236217484, 1.0000000003481242, 0.9999999950113339;
+  for (int i = 0; i < 3; i++) {
+    EXPECT_DOUBLE_EQ(ghg_forcing_t0(i), expected_t0(i));
+  }
+}
+
+TEST(step_concentration, unit) {
+  dynamic_weather_model model = define_minimal_weather_model();
+
+
+    
+    // emissions, // ALSO ALSO ZERO?
+    // gasboxes_old, THIS IS UNINITALISED,= )s, line 404 of fair.py
+    // airborne_emissions_old, // ALSO ZERO INITIALIZED
+    // alpha_lifetime, // ALSO ALSO ZERO?
+    // baseline_concentration,
+    // baseline_emissions,
+    // concentration_per_emission,
+    // lifetime,
+    // partition_fraction,
+    // timestep,
+
+}
+
+
 dynamic_weather_model define_minimal_weather_model() {
   dynamic_weather_model model;
   std::vector<std::string> species_names{"CO2", "CH4", "N2O"};

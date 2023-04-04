@@ -89,8 +89,7 @@ Eigen::VectorXd dynamic_weather_model::meinshausen(
     const Eigen::VectorXd& forcing_scaling,
     const Eigen::VectorXd& radiative_efficiency,
     const Eigen::VectorXi& co2_indices, const Eigen::VectorXi& ch4_indices,
-    const Eigen::VectorXi& n2o_indices,
-    const Eigen::VectorXi& other_indices) {
+    const Eigen::VectorXi& n2o_indices, const Eigen::VectorXi& other_indices) {
   double a1 = -2.4785e-07;
   double b1 = 0.00075906;
   double c1 = -0.0021492;
@@ -139,9 +138,8 @@ Eigen::VectorXd dynamic_weather_model::meinshausen(
   Eigen::VectorXd diff = (co2(where_central) - co2_base(where_central));
   alpha_p(where_central) = d1 + a1 * diff.array().square() + b1 * diff.array();
   alpha_p(where_low) = alpha_p(where_low).array() + d1;
-  alpha_p(where_high) = alpha_p(where_high).array() + d1 - b1*b1 / (4 * a1);
+  alpha_p(where_high) = alpha_p(where_high).array() + d1 - b1 * b1 / (4 * a1);
   Eigen::VectorXd alpha_n2o = c1 * n2o.array().sqrt();
-  
 
   erf_out(co2_indices) = (alpha_p + alpha_n2o).array() *
                          (co2.array() / co2_base.array()).log() *
@@ -158,6 +156,26 @@ Eigen::VectorXd dynamic_weather_model::meinshausen(
                          forcing_scaling(n2o_indices).array();
 
   return erf_out;
+}
+
+Eigen::VectorXd dynamic_weather_model::calculate_alpha(
+    const Eigen::VectorXd& airborne_emissions,
+    const Eigen::VectorXd& cumulative_emissions, const Eigen::VectorXd& g0,
+    const Eigen::VectorXd& g1, const Eigen::VectorXd& iirf_0,
+    const Eigen::VectorXd& iirf_airborne,
+    const Eigen::VectorXd& iirf_temperature, const Eigen::VectorXd& iirf_uptake,
+    const Eigen::VectorXd& temperature, double iirf_max) {
+  Eigen::VectorXd iirf_im1 =
+      iirf_0.array() +
+      iirf_uptake.array() *
+          (cumulative_emissions - airborne_emissions).array() +
+      iirf_temperature.array() * temperature.array() +
+      iirf_airborne.array() * airborne_emissions.array();
+  Eigen::VectorXd iirf_im2 = iirf_im1.unaryExpr(
+      [iirf_max](double x) { return (x > iirf_max ? iirf_max : x); });
+  Eigen::VectorXd alpha = g0.array() * (iirf_im2.array() / g1.array()).exp();
+  // TODO: any that go nan -> 1
+  return alpha;
 }
 
 /**
