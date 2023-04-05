@@ -98,6 +98,12 @@ struct species_struct {
   Eigen::VectorXd aci_scale;
   Eigen::VectorXd lifetime_temperature_sensitivity;
   Eigen::VectorXd concentration_per_emission;
+  Eigen::VectorXi co2_indices;
+  Eigen::VectorXi ch4_indices;
+  Eigen::VectorXi n2o_indices;
+  Eigen::VectorXi other_gh_indices;
+  Eigen::VectorXi ghg_forward_indices;
+  Eigen::VectorXi ghg_inverse_indices;
   species_struct(int i) {
     name = std::vector<std::string>(i);
     type = std::vector<std::string>(i);

@@ -66,6 +66,15 @@ class dynamic_weather_model : public dynamic_model {
                                   const Eigen::VectorXd& iirf_uptake,
                                   const Eigen::VectorXd& cummins_state_array,
                                   double iirf_max);
+  std::vector<Eigen::MatrixXd> step_concentration(
+      const Eigen::VectorXd& emissions, const Eigen::MatrixXd& gasboxes_old,
+      const Eigen::VectorXd& airborne_emissions_old,
+      const Eigen::VectorXd& alpha_lifetime,
+      const Eigen::VectorXd& baseline_concentration,
+      const Eigen::VectorXd& baseline_emissions,
+      const Eigen::VectorXd& concentration_per_emission,
+      const Eigen::MatrixXd& lifetime,
+      const Eigen::MatrixXd& partition_fraction, int timestep);
   dynamic_weather_model();
 };
 

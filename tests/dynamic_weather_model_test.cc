@@ -22,6 +22,7 @@
 #include "species_struct.hh"
 #include "tests/dynamic_weather_model_test.hh"
 #include "utility.hh"
+#define MSL model.species_list
 
 TEST(species_from_string_test, unit) {
   std::string s =
@@ -184,8 +185,9 @@ TEST(meinshausen, unit) {
       model.ch4_indices, model.n2o_indices, model.other_indices);
   Eigen::VectorXd ghg_forcing_t1 = model.meinshausen(
       concentration_t1, reference_concentration, forcing_scaling,
-      model.species_list.greenhouse_gas_radiative_efficiency, model.co2_indices,
-      model.ch4_indices, model.n2o_indices, model.other_indices);
+      model.species_list.greenhouse_gas_radiative_efficiency,
+      model.species_list.co2_indices, model.species_list.ch4_indices,
+      model.species_list.n2o_indices, model.species_list.other_gh_indices);
   Eigen::VectorXd expected_t0(3);
   expected_t0 << 0, 0, 0;
   Eigen::VectorXd expected_t1(3);
@@ -204,12 +206,8 @@ TEST(calculate_alpha, unit) {
   Eigen::VectorXd temperature(3);
   temperature << 0, 0, 0;
   Eigen::VectorXd cummins_state_array(3);
-  cummins_state_array << 0,0,0;
+  cummins_state_array << 0, 0, 0;
 
-  // airborne emissions
-  // cululative_emissions
-  // iirf_max
-  // cumins_state_array
   Eigen::VectorXd airborne_emissions(3);
   airborne_emissions << 0, 0, 0;
   Eigen::VectorXd cumulative_emissions(3);
@@ -229,52 +227,51 @@ TEST(calculate_alpha, unit) {
 
 TEST(step_concentration, unit) {
   dynamic_weather_model model = define_minimal_weather_model();
+  utility::update_species_list_indicies(model.species_list);
+  Eigen::VectorXd emissions_array(3);
+  emissions_array << 0, 0, 0;
+  Eigen::MatrixXd gas_partitions_array(4, 3);
+  gas_partitions_array << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+  Eigen::VectorXd airborne_emissions_array(3);
+  airborne_emissions_array << 0, 0, 0;
+  Eigen::VectorXd alpha_lifetime_array(3);
+  alpha_lifetime_array << 0, 0, 0;
+  std::vector<Eigen::MatrixXd> out = model.step_concentration(
+      emissions_array(MSL.ghg_forward_indices),
+      gas_partitions_array(Eigen::all, MSL.ghg_forward_indices),
+      airborne_emissions_array(MSL.ghg_forward_indices),
+      alpha_lifetime_array(MSL.ghg_forward_indices),
+      MSL.baseline_concentration(MSL.ghg_forward_indices),
+      MSL.baseline_emissions(MSL.ghg_forward_indices),
+      MSL.concentration_per_emission(MSL.ghg_forward_indices),
+      MSL.unperturbed_lifetime(Eigen::all, MSL.ghg_forward_indices),
+      MSL.partition_fraction(Eigen::all, MSL.ghg_forward_indices), 270);
 
+  Eigen::VectorXd concentration_out = out[0];
+  Eigen::MatrixXd gasboxes_new = out[1];
+  Eigen::VectorXd airborne_emissions_new = out[2];
 
-    
-    // emissions, // ALSO ALSO ZERO?
-    // gasboxes_old, THIS IS UNINITALISED,= )s, line 404 of fair.py
-    // airborne_emissions_old, // ALSO ZERO INITIALIZED
-    // alpha_lifetime, // ALSO ALSO ZERO?
-    // baseline_concentration,
-    // baseline_emissions,
-    // concentration_per_emission,
-    // lifetime,
-    // partition_fraction,
-    // timestep,
+  Eigen::VectorXd concentration_test(3);
+  concentration_test << 278.3, 729.2, 270.1;
+  Eigen::MatrixXd gasboxes_test(4,3);
+  gasboxes_test << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+  Eigen::VectorXd airborne_emissions_test(3);
+  airborne_emissions_test << 0, 0, 0;
+
+  EXPECT_EQ(concentration_out, concentration_test);
+  EXPECT_EQ(gasboxes_new, gasboxes_test);
+  EXPECT_EQ(airborne_emissions_new, airborne_emissions_test);
 
 }
-
 
 dynamic_weather_model define_minimal_weather_model() {
   dynamic_weather_model model;
   std::vector<std::string> species_names{"CO2", "CH4", "N2O"};
   std::string filename = "../src/weather/data/species_configs_properties.csv";
   model.species_list = utility::species_from_file(filename, species_names);
+
   int num_species = model.species_list.name.size();
   model.num_samples = 2;
-  std::vector<int> co2_indices_tmp;
-  std::vector<int> ch4_indices_tmp;
-  std::vector<int> n2o_indices_tmp;
-  std::vector<int> other_indices_tmp;
-  for (int i = 0; i < num_species; i++) {
-    if (model.species_list.type.at(i) == "co2") {
-      co2_indices_tmp.push_back(i);
-    } else if (model.species_list.type.at(i) == "ch4") {
-      ch4_indices_tmp.push_back(i);
-    } else if (model.species_list.type.at(i) == "n2o") {
-      n2o_indices_tmp.push_back(i);
-    } else {
-      other_indices_tmp.push_back(i);
-    }
-  }
-  model.co2_indices = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(
-      co2_indices_tmp.data(), co2_indices_tmp.size());
-  model.ch4_indices = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(
-      ch4_indices_tmp.data(), ch4_indices_tmp.size());
-  model.n2o_indices = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(
-      n2o_indices_tmp.data(), n2o_indices_tmp.size());
-  model.other_indices = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(
-      other_indices_tmp.data(), other_indices_tmp.size());
+
   return model;
 }

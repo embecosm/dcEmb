@@ -523,6 +523,51 @@ species_struct utility::species_from_file(
   return utility::species_list_to_struct(species_list);
 }
 
+void utility::update_species_list_indicies(species_struct& species_struct)
+{
+  std::vector<int> co2_indices_tmp;
+  std::vector<int> ch4_indices_tmp;
+  std::vector<int> n2o_indices_tmp;
+  std::vector<int> other_indices_tmp;
+  std::vector<int> ghg_forward_indices_tmp;
+  std::vector<int> ghg_inverse_indices_tmp;
+  for (int i = 0; i < species_struct.name.size(); i++) {
+    if (species_struct.type.at(i) == "co2") {
+      co2_indices_tmp.push_back(i);
+    } else if (species_struct.type.at(i) == "ch4") {
+      ch4_indices_tmp.push_back(i);
+    } else if (species_struct.type.at(i) == "n2o") {
+      n2o_indices_tmp.push_back(i);
+    } else {
+      other_indices_tmp.push_back(i);
+    }
+    if ((species_struct.input_mode[i] == "emissions" |
+         species_struct.input_mode[i] == "calculated") &
+        species_struct.greenhouse_gas(i)) {
+      ghg_forward_indices_tmp.push_back(i);
+    }
+    if ((species_struct.input_mode[i] == "concentration") &
+        species_struct.greenhouse_gas(i)) {
+      ghg_inverse_indices_tmp.push_back(i);
+    }
+  }
+  species_struct.co2_indices = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(
+      co2_indices_tmp.data(), co2_indices_tmp.size());
+  species_struct.ch4_indices = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(
+      ch4_indices_tmp.data(), ch4_indices_tmp.size());
+  species_struct.n2o_indices = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(
+      n2o_indices_tmp.data(), n2o_indices_tmp.size());
+  species_struct.other_gh_indices =
+      Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(other_indices_tmp.data(),
+                                                    other_indices_tmp.size());
+  species_struct.ghg_forward_indices =
+      Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(
+          ghg_forward_indices_tmp.data(), ghg_forward_indices_tmp.size());
+  species_struct.ghg_inverse_indices =
+      Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(
+          ghg_inverse_indices_tmp.data(), ghg_inverse_indices_tmp.size());
+}
+
 species_struct utility::species_list_to_struct(
     const std::vector<species>& species_list) {
   species_struct species_struct(species_list.size());
@@ -585,5 +630,6 @@ species_struct utility::species_list_to_struct(
     species_struct.concentration_per_emission(i) =
         species_list[i].concentration_per_emission;
   }
+  utility::update_species_list_indicies(species_struct);
   return species_struct;
 }

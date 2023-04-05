@@ -28,7 +28,7 @@
 
 #define PL parameter_locations
 #define ZERO(a, b) Eigen::MatrixXd::Zero(a, b)
-
+#define DEBUG(x) std::cout << #x << "= " << x << std::endl;
 /**
  * Observed outcomes for the weather problem.
  */
@@ -176,6 +176,48 @@ Eigen::VectorXd dynamic_weather_model::calculate_alpha(
   Eigen::VectorXd alpha = g0.array() * (iirf_im2.array() / g1.array()).exp();
   // TODO: any that go nan -> 1
   return alpha;
+}
+
+std::vector<Eigen::MatrixXd> dynamic_weather_model::step_concentration(
+    const Eigen::VectorXd& emissions, const Eigen::MatrixXd& gasboxes_old,
+    const Eigen::VectorXd& airborne_emissions_old,
+    const Eigen::VectorXd& alpha_lifetime,
+    const Eigen::VectorXd& baseline_concentration,
+    const Eigen::VectorXd& baseline_emissions,
+    const Eigen::VectorXd& concentration_per_emission,
+    const Eigen::MatrixXd& lifetime, const Eigen::MatrixXd& partition_fraction,
+    int timestep) {
+  Eigen::MatrixXd alpha_lifetime_array(lifetime.rows(), lifetime.cols());
+  Eigen::MatrixXd emissions_array(lifetime.rows(), lifetime.cols());
+  Eigen::MatrixXd baseline_emissions_array(lifetime.rows(), lifetime.cols());
+
+  for (int i = 0; i < lifetime.rows(); i++) {
+    alpha_lifetime_array.row(i) = alpha_lifetime;
+    emissions_array.row(i) = emissions;
+    baseline_emissions_array.row(i) = baseline_emissions;
+  }
+
+  Eigen::MatrixXd decay_rate =
+      timestep / (alpha_lifetime_array.array() * lifetime.array());
+  Eigen::MatrixXd decay_factor = (-(decay_rate.array())).exp();
+
+  Eigen::MatrixXd gasboxes_new =
+      (partition_fraction.array() *
+           (emissions_array - baseline_emissions_array).array() * 1 /
+           decay_rate.array() * (1 - decay_factor.array()) * timestep +
+       gasboxes_old.array() * decay_factor.array());
+
+  Eigen::VectorXd airborne_emissions_new = gasboxes_new.colwise().sum();
+
+  Eigen::VectorXd concentration_out =
+      (baseline_concentration.array() +
+       concentration_per_emission.array() * airborne_emissions_new.array());
+  std::vector<Eigen::MatrixXd> out_mat(3);
+  out_mat[0] = (concentration_out);
+  out_mat[1] = (gasboxes_new);
+  out_mat[2] = (airborne_emissions_new);
+
+  return out_mat;
 }
 
 /**

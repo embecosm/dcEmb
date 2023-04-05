@@ -28,7 +28,7 @@
         std::chrono::duration_cast<std::chrono::microseconds>(stop - start); \
     std::cout << duration.count() << std::endl;                              \
   }
-#define DEBUG(x) std::cout << #x << "= " << x << std::endl;
+
 
 void dynamic_model::invert_model() {
   Eigen::MatrixXd response_vars_fs = this->get_observed_outcomes();
