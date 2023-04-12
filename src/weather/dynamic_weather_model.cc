@@ -220,6 +220,65 @@ std::vector<Eigen::MatrixXd> dynamic_weather_model::step_concentration(
   return out_mat;
 }
 
+std::vector<Eigen::MatrixXd> dynamic_weather_model::unstep_concentration(
+    const Eigen::VectorXd& concentrations, const Eigen::MatrixXd& gasboxes_old,
+    const Eigen::VectorXd& airborne_emissions_old,
+    const Eigen::VectorXd& alpha_lifetime,
+    const Eigen::VectorXd& baseline_concentration,
+    const Eigen::VectorXd& baseline_emissions,
+    const Eigen::VectorXd& concentration_per_emission,
+    const Eigen::MatrixXd& lifetime, const Eigen::MatrixXd& partition_fraction,
+    int timestep) {
+  Eigen::MatrixXd alpha_lifetime_array(lifetime.rows(), lifetime.cols());
+
+  for (int i = 0; i < lifetime.rows(); i++) {
+    alpha_lifetime_array.row(i) = alpha_lifetime;
+  }
+
+  Eigen::MatrixXd decay_rate =
+      timestep / (alpha_lifetime_array.array() * lifetime.array());
+  Eigen::MatrixXd decay_factor = (-(decay_rate.array())).exp();
+
+  Eigen::VectorXd airborne_emissions_new =
+      (concentrations - baseline_concentration).array() /
+      concentration_per_emission.array();
+
+  Eigen::VectorXd emissions_new =
+      (airborne_emissions_new.array() -
+       (gasboxes_old.array() * decay_factor.array())
+           .colwise()
+           .sum()
+           .transpose()) /
+      (partition_fraction.array() / decay_rate.array() *
+       (1 - decay_factor.array()) * timestep)
+          .colwise()
+          .sum()
+          .transpose();
+
+
+  Eigen::MatrixXd emissions_array(lifetime.rows(), lifetime.cols());
+
+  for (int i = 0; i < lifetime.rows(); i++) {
+    emissions_array.row(i) = emissions_new;
+  }
+
+  Eigen::MatrixXd gasboxes_new = 
+    timestep * 
+    emissions_array.array() *
+    partition_fraction.array() *
+    1 /
+    decay_rate.array() * 
+    (1 - decay_factor.array()) +
+    gasboxes_old.array() * decay_factor.array();
+
+  std::vector<Eigen::MatrixXd> out_mat(3);
+
+  out_mat[0] = (emissions_new + baseline_emissions);
+  out_mat[1] = (gasboxes_new);
+  out_mat[2] = (airborne_emissions_new);
+
+  return out_mat;
+}
 /**
  * Dynamic Causal Model constructor for the weather problem
  */

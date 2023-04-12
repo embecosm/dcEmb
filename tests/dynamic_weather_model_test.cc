@@ -120,7 +120,7 @@ TEST(species_from_file_test, unit) {
   EXPECT_EQ(species.aci_scale(0), 0);
   EXPECT_EQ(species.ch4_lifetime_chemical_sensitivity(0), 0.000254099);
   EXPECT_EQ(species.lifetime_temperature_sensitivity(0), -0.0408);
-  EXPECT_EQ(species.concentration_per_emission(0), 0);
+  EXPECT_EQ(species.concentration_per_emission(0), 0.3516458926201187);
 
   Eigen::VectorXd part1(4);
   part1 << 1, 0, 0, 0;
@@ -164,15 +164,15 @@ TEST(species_from_file_test, unit) {
   EXPECT_EQ(species.aci_scale(1), 0);
   EXPECT_EQ(species.ch4_lifetime_chemical_sensitivity(1), -0.000722665);
   EXPECT_EQ(species.lifetime_temperature_sensitivity(1), 0);
-  EXPECT_EQ(species.concentration_per_emission(1), 0);
+  EXPECT_EQ(species.concentration_per_emission(1), 0.128177017138222);
 }
 
 TEST(meinshausen, unit) {
   dynamic_weather_model model = define_minimal_weather_model();
 
   Eigen::VectorXd forcing_scaling =
-      model.species_list.forcing_scale.array() *
-      (1 + model.species_list.tropospheric_adjustment.array());
+      MSL.forcing_scale.array() *
+      (1 + MSL.tropospheric_adjustment.array());
   Eigen::VectorXd reference_concentration(3);
   reference_concentration << 277, 731, 270;
   Eigen::VectorXd concentration_t0(3);
@@ -181,13 +181,13 @@ TEST(meinshausen, unit) {
   concentration_t1 << 410, 1900, 325;
   Eigen::VectorXd ghg_forcing_t0 = model.meinshausen(
       concentration_t0, reference_concentration, forcing_scaling,
-      model.species_list.greenhouse_gas_radiative_efficiency, model.co2_indices,
+      MSL.greenhouse_gas_radiative_efficiency, model.co2_indices,
       model.ch4_indices, model.n2o_indices, model.other_indices);
   Eigen::VectorXd ghg_forcing_t1 = model.meinshausen(
       concentration_t1, reference_concentration, forcing_scaling,
-      model.species_list.greenhouse_gas_radiative_efficiency,
-      model.species_list.co2_indices, model.species_list.ch4_indices,
-      model.species_list.n2o_indices, model.species_list.other_gh_indices);
+      MSL.greenhouse_gas_radiative_efficiency,
+      MSL.co2_indices, MSL.ch4_indices,
+      MSL.n2o_indices, MSL.other_gh_indices);
   Eigen::VectorXd expected_t0(3);
   expected_t0 << 0, 0, 0;
   Eigen::VectorXd expected_t1(3);
@@ -213,10 +213,10 @@ TEST(calculate_alpha, unit) {
   Eigen::VectorXd cumulative_emissions(3);
   cumulative_emissions << 0, 0, 0;
   Eigen::VectorXd ghg_forcing_t0 = model.calculate_alpha(
-      airborne_emissions, cumulative_emissions, model.species_list.g0,
-      model.species_list.g1, model.species_list.iirf_0,
-      model.species_list.iirf_airborne, model.species_list.iirf_temperature,
-      model.species_list.iirf_uptake, cummins_state_array, 100);
+      airborne_emissions, cumulative_emissions, MSL.g0,
+      MSL.g1, MSL.iirf_0,
+      MSL.iirf_airborne, MSL.iirf_temperature,
+      MSL.iirf_uptake, cummins_state_array, 100);
 
   Eigen::VectorXd expected_t0(3);
   expected_t0 << 0.1291924236217484, 1.0000000003481242, 0.9999999950113339;
@@ -253,7 +253,7 @@ TEST(step_concentration, unit) {
 
   Eigen::VectorXd concentration_test(3);
   concentration_test << 278.3, 729.2, 270.1;
-  Eigen::MatrixXd gasboxes_test(4,3);
+  Eigen::MatrixXd gasboxes_test(4, 3);
   gasboxes_test << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
   Eigen::VectorXd airborne_emissions_test(3);
   airborne_emissions_test << 0, 0, 0;
@@ -261,7 +261,64 @@ TEST(step_concentration, unit) {
   EXPECT_EQ(concentration_out, concentration_test);
   EXPECT_EQ(gasboxes_new, gasboxes_test);
   EXPECT_EQ(airborne_emissions_new, airborne_emissions_test);
+}
 
+TEST(unstep_concentration, unit) {
+  dynamic_weather_model model = define_minimal_weather_model();
+  MSL.baseline_concentration << 277, 731, 270;
+  Eigen::VectorXd concentration_array(3);
+  concentration_array << 410, 1900, 325;
+  Eigen::MatrixXd gas_partitions_array(4, 3);
+  gas_partitions_array << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+  Eigen::VectorXd airborne_emissions_array(3);
+  airborne_emissions_array << 0, 0, 0;
+
+  Eigen::VectorXd forcing_array(3);
+  forcing_array << 0, 0, 0;
+  Eigen::VectorXd temperature(3);
+  temperature << 0, 0, 0;
+  Eigen::VectorXd cummins_state_array(3);
+  cummins_state_array << 0, 0, 0;
+
+  Eigen::VectorXd airborne_emissions(3);
+  airborne_emissions << 0, 0, 0;
+  Eigen::VectorXd cumulative_emissions(3);
+  cumulative_emissions << 0, 0, 0;
+  Eigen::VectorXd alpha_lifetime_array = model.calculate_alpha(
+      airborne_emissions, cumulative_emissions, MSL.g0,
+      MSL.g1, MSL.iirf_0,
+      MSL.iirf_airborne, MSL.iirf_temperature,
+      MSL.iirf_uptake, cummins_state_array, 100);
+
+  std::vector<Eigen::MatrixXd> out = model.unstep_concentration(
+      concentration_array(MSL.ghg_forward_indices),
+      gas_partitions_array(Eigen::all, MSL.ghg_forward_indices),
+      airborne_emissions_array(MSL.ghg_forward_indices),
+      alpha_lifetime_array(MSL.ghg_forward_indices),
+      MSL.baseline_concentration(MSL.ghg_forward_indices),
+      MSL.baseline_emissions(MSL.ghg_forward_indices),
+      MSL.concentration_per_emission(MSL.ghg_forward_indices),
+      MSL.unperturbed_lifetime(Eigen::all, MSL.ghg_forward_indices),
+      MSL.partition_fraction(Eigen::all, MSL.ghg_forward_indices), 270);
+
+  Eigen::VectorXd emissions_out = out[0];
+  Eigen::MatrixXd gasboxes_new = out[1];
+  Eigen::VectorXd airborne_emissions_new = out[2];
+
+  Eigen::VectorXd emissions_test(3);
+  emissions_test << 14.5080631466396, 402.9535752340407, 4.297595650508209;
+  Eigen::MatrixXd gasboxes_test(4, 3);
+  gasboxes_test << 851.2016834307615, 3324.366996838108, 429.09408588194685,
+      164.7615496725284, 0.0, 0.0, 19.34103532615702, 0.0, 0.0,
+      2.228946427301561, 0.0, 0.0;
+
+  Eigen::VectorXd airborne_emissions_test(3);
+  airborne_emissions_test << 1037.5332148567484, 3324.3669968381087,
+      429.09408588194685;
+
+  EXPECT_EQ(emissions_out, emissions_test);
+  EXPECT_EQ(gasboxes_new, gasboxes_test);
+  EXPECT_EQ(airborne_emissions_new, airborne_emissions_test);
 }
 
 dynamic_weather_model define_minimal_weather_model() {

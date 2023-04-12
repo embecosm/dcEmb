@@ -523,8 +523,7 @@ species_struct utility::species_from_file(
   return utility::species_list_to_struct(species_list);
 }
 
-void utility::update_species_list_indicies(species_struct& species_struct)
-{
+void utility::update_species_list_indicies(species_struct& species_struct) {
   std::vector<int> co2_indices_tmp;
   std::vector<int> ch4_indices_tmp;
   std::vector<int> n2o_indices_tmp;
@@ -631,5 +630,15 @@ species_struct utility::species_list_to_struct(
         species_list[i].concentration_per_emission;
   }
   utility::update_species_list_indicies(species_struct);
+  utility::calculate_concentration_per_emission(species_struct);
   return species_struct;
+}
+
+void utility::calculate_concentration_per_emission(species_struct& species_struct) {
+  species_struct.concentration_per_emission =
+      1 / (5.1352e18 /  // Mass atmosphere
+      1e18 * species_struct.molecular_weight.array() /
+      28.97);  // Molecular_weight_air
+
+  return;
 }

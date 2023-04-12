@@ -75,6 +75,16 @@ class dynamic_weather_model : public dynamic_model {
       const Eigen::VectorXd& concentration_per_emission,
       const Eigen::MatrixXd& lifetime,
       const Eigen::MatrixXd& partition_fraction, int timestep);
+  std::vector<Eigen::MatrixXd> unstep_concentration(
+      const Eigen::VectorXd& concentrations,
+      const Eigen::MatrixXd& gasboxes_old,
+      const Eigen::VectorXd& airborne_emissions_old,
+      const Eigen::VectorXd& alpha_lifetime,
+      const Eigen::VectorXd& baseline_concentration,
+      const Eigen::VectorXd& baseline_emissions,
+      const Eigen::VectorXd& concentration_per_emission,
+      const Eigen::MatrixXd& lifetime,
+      const Eigen::MatrixXd& partition_fraction, int timestep);
   dynamic_weather_model();
 };
 
