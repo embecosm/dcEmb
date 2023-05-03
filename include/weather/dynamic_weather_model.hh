@@ -28,10 +28,9 @@ class dynamic_weather_model : public dynamic_model {
    */
   parameter_location_weather parameter_locations;
   species_struct species_list;
-  Eigen::VectorXi co2_indices;
-  Eigen::VectorXi ch4_indices;
-  Eigen::VectorXi n2o_indices;
-  Eigen::VectorXi other_indices;
+  Eigen::MatrixXd ecf;
+  double airborne_emissions;
+  double cumulative_emissions;
   Eigen::VectorXd get_observed_outcomes();
   std::function<Eigen::VectorXd(Eigen::VectorXd)> get_forward_model_function();
   Eigen::VectorXd forward_model(

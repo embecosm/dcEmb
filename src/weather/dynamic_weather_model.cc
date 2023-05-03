@@ -71,6 +71,20 @@ Eigen::MatrixXd dynamic_weather_model::eval_generative(
     const Eigen::VectorXd& parameters,
     const parameter_location_weather& parameter_locations,
     const int& timeseries_length) {
+  Eigen::VectorXd airborne_emissions_array = Eigen::VectorXd(timeseries_length);
+  airborne_emissions_array(0) = airborne_emissions;
+
+  Eigen::VectorXd cumulative_emissions_array =
+      Eigen::VectorXd(timeseries_length);
+
+  cumulative_emissions_array(0) = cumulative_emissions;
+
+  Eigen::MatrixXd alpha_lifetime_array;
+  species_struct sl = this->species_list;
+  // model.calculate_alpha(airborne_emissions_array(0), cumulative_emissions_array(0), sl.g0, sl.g1,
+  //                       sl.iirf_0, sl.iirf_airborne, sl.iirf_temperature,
+  //                       sl.iirf_uptake, cummins_state_array, 100);
+
   return Eigen::MatrixXd::Zero(1, 1);
 }
 Eigen::MatrixXd dynamic_weather_model::eval_generative(
@@ -255,21 +269,16 @@ std::vector<Eigen::MatrixXd> dynamic_weather_model::unstep_concentration(
           .sum()
           .transpose();
 
-
   Eigen::MatrixXd emissions_array(lifetime.rows(), lifetime.cols());
 
   for (int i = 0; i < lifetime.rows(); i++) {
     emissions_array.row(i) = emissions_new;
   }
 
-  Eigen::MatrixXd gasboxes_new = 
-    timestep * 
-    emissions_array.array() *
-    partition_fraction.array() *
-    1 /
-    decay_rate.array() * 
-    (1 - decay_factor.array()) +
-    gasboxes_old.array() * decay_factor.array();
+  Eigen::MatrixXd gasboxes_new =
+      timestep * emissions_array.array() * partition_fraction.array() * 1 /
+          decay_rate.array() * (1 - decay_factor.array()) +
+      gasboxes_old.array() * decay_factor.array();
 
   std::vector<Eigen::MatrixXd> out_mat(3);
 

@@ -17,11 +17,16 @@
 #include <iostream>
 #pragma once
 struct parameter_location_weather {
-  std::vector<std::string> names;
-  std::vector<int> locations;
+  Eigen::VectorXi ocean_heat_transfer = Eigen::VectorXi::Ones(1) * -1;
+  Eigen::VectorXi ocean_heat_capacity = Eigen::VectorXi::Ones(1) * -1;
+  Eigen::VectorXi deep_ocean_efficacy = Eigen::VectorXi::Ones(1) * -1;
+  Eigen::VectorXi sigma_eta = Eigen::VectorXi::Ones(1) * -1;
+  Eigen::VectorXi sigma_xi = Eigen::VectorXi::Ones(1) * -1;
+  Eigen::VectorXi gamma_autocorrelation = Eigen::VectorXi::Ones(1) * -1;
+  Eigen::VectorXi forcing_4co2 = Eigen::VectorXi::Ones(1) * -1;
 };
 
 inline bool operator==(const parameter_location_weather& lhs,
                        const parameter_location_weather& rhs) {
-  return lhs.names == rhs.names & lhs.locations == rhs.locations;
+  return 0;
 }

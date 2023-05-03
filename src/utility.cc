@@ -507,6 +507,23 @@ species utility::species_from_string(const std::string& string) {
 
 species_struct utility::species_from_file(
     const std::string& filename, const std::vector<std::string>& names) {
+  std::vector<species> species_list(names.size());
+  std::string species_line;
+  std::ifstream species_file;
+  species_file.open(filename);
+  while (std::getline(species_file, species_line)) {
+    std::vector<std::string> species_split;
+    utility::splitstr(species_split, species_line, ',');
+    int idx =
+        std::find(names.begin(), names.end(), species_split[0]) - names.begin();
+    if (idx != names.size()) {
+      species_list.at(idx) = utility::species_from_string(species_line);
+    }
+  }
+  return utility::species_list_to_struct(species_list);
+}
+
+species_struct utility::species_from_file(const std::string& filename) {
   std::vector<species> species_list;
   std::string species_line;
   std::ifstream species_file;
@@ -514,12 +531,8 @@ species_struct utility::species_from_file(
   while (std::getline(species_file, species_line)) {
     std::vector<std::string> species_split;
     utility::splitstr(species_split, species_line, ',');
-    if (std::find(names.begin(), names.end(), species_split[0]) !=
-        names.end()) {
-      species_list.push_back(utility::species_from_string(species_line));
-    }
+    species_list.push_back(utility::species_from_string(species_line));
   }
-
   return utility::species_list_to_struct(species_list);
 }
 
@@ -634,11 +647,12 @@ species_struct utility::species_list_to_struct(
   return species_struct;
 }
 
-void utility::calculate_concentration_per_emission(species_struct& species_struct) {
+void utility::calculate_concentration_per_emission(
+    species_struct& species_struct) {
   species_struct.concentration_per_emission =
       1 / (5.1352e18 /  // Mass atmosphere
-      1e18 * species_struct.molecular_weight.array() /
-      28.97);  // Molecular_weight_air
+           1e18 * species_struct.molecular_weight.array() /
+           28.97);  // Molecular_weight_air
 
   return;
 }

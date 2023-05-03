@@ -223,6 +223,7 @@ void splitstr(std::vector<std::string>& vec, const std::string& str,
 species species_from_string(const std::string& string);
 species_struct species_from_file(const std::string& filename,
                                  const std::vector<std::string>& names);
+species_struct species_from_file(const std::string& filename);
 void update_species_list_indicies(species_struct& species_struct);
 species_struct species_list_to_struct(const std::vector<species>& species_list);
 void calculate_concentration_per_emission(species_struct& species_struct);

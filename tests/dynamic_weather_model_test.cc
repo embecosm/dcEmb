@@ -181,8 +181,8 @@ TEST(meinshausen, unit) {
   concentration_t1 << 410, 1900, 325;
   Eigen::VectorXd ghg_forcing_t0 = model.meinshausen(
       concentration_t0, reference_concentration, forcing_scaling,
-      MSL.greenhouse_gas_radiative_efficiency, model.co2_indices,
-      model.ch4_indices, model.n2o_indices, model.other_indices);
+      MSL.greenhouse_gas_radiative_efficiency, MSL.co2_indices,
+      MSL.ch4_indices, MSL.n2o_indices, MSL.other_gh_indices);
   Eigen::VectorXd ghg_forcing_t1 = model.meinshausen(
       concentration_t1, reference_concentration, forcing_scaling,
       MSL.greenhouse_gas_radiative_efficiency,
@@ -320,6 +320,7 @@ TEST(unstep_concentration, unit) {
   EXPECT_EQ(gasboxes_new, gasboxes_test);
   EXPECT_EQ(airborne_emissions_new, airborne_emissions_test);
 }
+
 
 dynamic_weather_model define_minimal_weather_model() {
   dynamic_weather_model model;
