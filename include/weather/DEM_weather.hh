@@ -18,9 +18,10 @@
 
 int run_weather_test();
 
-
-Eigen::MatrixXd simple_ecf(species_struct species, std::string scenario);
-species_struct simple_species_struct(std::vector<std::string> species_names);
+std::vector<Eigen::MatrixXd> simple_ecf(const species_struct& species,
+                           const std::string& scenario, const int& start_date,
+                           const int& end_date);
+species_struct simple_species_struct(const std::vector<std::string>& species_names);
 
 species_struct simple_species_struct();
 parameter_location_weather default_parameter_locations();

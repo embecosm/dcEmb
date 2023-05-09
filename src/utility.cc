@@ -538,14 +538,21 @@ species_struct utility::species_from_file(const std::string& filename) {
 
 void utility::update_species_list_indicies(species_struct& species_struct) {
   std::vector<int> co2_indices_tmp;
+  std::vector<int> co2_ffi_indices_tmp;
+  std::vector<int> co2_afolu_indices_tmp;
   std::vector<int> ch4_indices_tmp;
   std::vector<int> n2o_indices_tmp;
   std::vector<int> other_indices_tmp;
+  std::vector<int> ghg_indices_tmp;
   std::vector<int> ghg_forward_indices_tmp;
   std::vector<int> ghg_inverse_indices_tmp;
   for (int i = 0; i < species_struct.name.size(); i++) {
     if (species_struct.type.at(i) == "co2") {
       co2_indices_tmp.push_back(i);
+    } else if (species_struct.type.at(i) == "co2 ffi") {
+      co2_ffi_indices_tmp.push_back(i);
+    } else if (species_struct.type.at(i) == "co2 afolu") {
+      co2_afolu_indices_tmp.push_back(i);
     } else if (species_struct.type.at(i) == "ch4") {
       ch4_indices_tmp.push_back(i);
     } else if (species_struct.type.at(i) == "n2o") {
@@ -553,18 +560,25 @@ void utility::update_species_list_indicies(species_struct& species_struct) {
     } else {
       other_indices_tmp.push_back(i);
     }
+    if (species_struct.greenhouse_gas(i)) {
+      ghg_indices_tmp.push_back(i);
+    }    
     if ((species_struct.input_mode[i] == "emissions" |
          species_struct.input_mode[i] == "calculated") &
         species_struct.greenhouse_gas(i)) {
       ghg_forward_indices_tmp.push_back(i);
     }
-    if ((species_struct.input_mode[i] == "concentration") &
+    if ((species_struct.input_mode[i] == "concentrations") &
         species_struct.greenhouse_gas(i)) {
       ghg_inverse_indices_tmp.push_back(i);
     }
   }
   species_struct.co2_indices = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(
       co2_indices_tmp.data(), co2_indices_tmp.size());
+  species_struct.co2_ffi_indices = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(
+      co2_ffi_indices_tmp.data(), co2_ffi_indices_tmp.size());
+  species_struct.co2_afolu_indices = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(
+      co2_afolu_indices_tmp.data(), co2_afolu_indices_tmp.size());
   species_struct.ch4_indices = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(
       ch4_indices_tmp.data(), ch4_indices_tmp.size());
   species_struct.n2o_indices = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(
@@ -572,6 +586,9 @@ void utility::update_species_list_indicies(species_struct& species_struct) {
   species_struct.other_gh_indices =
       Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(other_indices_tmp.data(),
                                                     other_indices_tmp.size());
+  species_struct.ghg_indices =
+      Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(
+          ghg_indices_tmp.data(), ghg_indices_tmp.size());
   species_struct.ghg_forward_indices =
       Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(
           ghg_forward_indices_tmp.data(), ghg_forward_indices_tmp.size());

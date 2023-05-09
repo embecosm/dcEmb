@@ -99,9 +99,12 @@ struct species_struct {
   Eigen::VectorXd lifetime_temperature_sensitivity;
   Eigen::VectorXd concentration_per_emission;
   Eigen::VectorXi co2_indices;
+  Eigen::VectorXi co2_ffi_indices;
+  Eigen::VectorXi co2_afolu_indices;
   Eigen::VectorXi ch4_indices;
   Eigen::VectorXi n2o_indices;
   Eigen::VectorXi other_gh_indices;
+  Eigen::VectorXi ghg_indices;
   Eigen::VectorXi ghg_forward_indices;
   Eigen::VectorXi ghg_inverse_indices;
   species_struct(int i) {

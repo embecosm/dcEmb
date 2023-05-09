@@ -29,30 +29,50 @@
 int run_weather_test() {
   dynamic_weather_model model;
   // Add Sulphur?
-  std::vector<std::string> species_names({"CO2 FFI", "CO2 AFOLU", "Sulfur",
-                                         "CO2",     "CH4",       "N2O"});
+  std::vector<std::string> species_names(
+      {"CO2 FFI", "CO2 AFOLU", "Sulfur", "CH4", "N2O", "CO2"});
   model.species_list = simple_species_struct(species_names);
   // model.species_list.input_mode[2] = "concentrations";
-  model.species_list.input_mode[3] = "emissions";
-  model.airborne_emissions = 0;
-  model.ecf = simple_ecf(model.species_list, "ssp119");
-  // model.eval_generative(true_prior_expectations(),
-  // default_parameter_locations);
+
+  int start_date = 1701;
+  int end_date = 1710;
+  int sz = end_date - start_date + 1;
+  // model.num_samples = sz;
+  std::vector<Eigen::MatrixXd> ecf =
+      simple_ecf(model.species_list, "ssp119", start_date, end_date);
+  model.emissions = ecf.at(0);
+  model.concentrations = ecf.at(1);
+  model.forcings = ecf.at(2);
+
+  model.emissions(0, Eigen::all) = Eigen::VectorXd::Ones(sz) * 38;
+  model.emissions(1, Eigen::all) = Eigen::VectorXd::Ones(sz) * 3;
+  model.emissions(2, Eigen::all) = Eigen::VectorXd::Ones(sz) * 100;
+  model.concentrations(3, Eigen::all) = Eigen::VectorXd::Ones(sz) * 1800;
+  model.concentrations(4, Eigen::all) = Eigen::VectorXd::Ones(sz) * 325;
+  model.concentrations(5, 0) = 278.3;
+
+  model.temperature = Eigen::MatrixXd::Zero(1, sz);
+  model.airborne_emissions =
+      Eigen::MatrixXd::Zero(model.species_list.name.size(), sz);
+  model.cumulative_emissions =
+      Eigen::MatrixXd::Zero(model.species_list.name.size(), sz);
+
+  model.eval_generative(true_prior_expectations(),
+                        default_parameter_locations(), sz);
 
   return 0;
 }
 
 // Fill emissions, concentrations and/or forcings
-Eigen::MatrixXd simple_ecf(species_struct species, std::string scenario) {
-  std::cout << "names";k
-  for(int i = 0; i < species.name.size(); i++)
-  {
-    std::cout << " " << species.name[i];
-  }
-  std::cout << '\n';
-  int start_date = 1701;
-  int end_date = 1710;
-  Eigen::MatrixXd out_matrix =
+std::vector<Eigen::MatrixXd> simple_ecf(const species_struct& species,
+                                        const std::string& scenario,
+                                        const int& start_date,
+                                        const int& end_date) {
+  Eigen::MatrixXd e_matrix =
+      Eigen::MatrixXd::Zero(species.name.size(), end_date - start_date + 1);
+  Eigen::MatrixXd c_matrix =
+      Eigen::MatrixXd::Zero(species.name.size(), end_date - start_date + 1);
+  Eigen::MatrixXd f_matrix =
       Eigen::MatrixXd::Zero(species.name.size(), end_date - start_date + 1);
   std::string emissions_filename =
       "../src/weather/data/rcmip-emissions-annual-means-v5-1-0.csv";
@@ -104,12 +124,13 @@ Eigen::MatrixXd simple_ecf(species_struct species, std::string scenario) {
     // reuses the memory
     if (species.input_mode.at(name_idx) == "emissions") {
       for (int i = 0; i < (end_date - start_date + 1); i++) {
-        out_matrix(name_idx, i) =
-            std::stod(emissions_split.at(start_date - 1700 + 7 + i));
+        int pos = start_date - 1700 + 7 + i;
+        if (pos < emissions_split.size()) {
+          std::string s = emissions_split.at(pos);
+          e_matrix(name_idx, i) =
+              (s == "") ? 0 : std::stod(emissions_split.at(pos));
+        }
       }
-      std::cout << "" << emissions_split.at(3) << '\n';
-      std::cout << name_idx << '\n';
-      std::cout << out_matrix(name_idx, Eigen::all) << '\n';
     }
   }
 
@@ -148,12 +169,13 @@ Eigen::MatrixXd simple_ecf(species_struct species, std::string scenario) {
     // reuses the memory
     if (species.input_mode.at(name_idx) == "concentrations") {
       for (int i = 0; i < (end_date - start_date + 1); i++) {
-        out_matrix(name_idx, i) =
-            std::stod(concentrations_split.at(start_date - 1700 + 7 + i));
+        int pos = start_date - 1700 + 7 + i;
+        if (pos < concentrations_split.size()) {
+          std::string s = concentrations_split.at(pos);
+          c_matrix(name_idx, i) =
+              (s == "") ? 0 : std::stod(concentrations_split.at(pos));
+        }
       }
-      std::cout << "" << concentrations_split.at(3) << '\n';
-      std::cout << name_idx << '\n';
-      std::cout << out_matrix(name_idx, Eigen::all) << '\n';
     }
   }
 
@@ -192,21 +214,38 @@ Eigen::MatrixXd simple_ecf(species_struct species, std::string scenario) {
     // reuses the memory
     if (species.input_mode.at(name_idx) == "forcings") {
       for (int i = 0; i < (end_date - start_date + 1); i++) {
-        out_matrix(name_idx, i) =
-            std::stod(forcings_split.at(start_date - 1700 + 7 + i));
+        int pos = start_date - 1700 + 7 + i;
+        if (pos < forcings_split.size()) {
+          std::string s = forcings_split.at(pos);
+          f_matrix(name_idx, i) =
+              (s == "") ? 0 : std::stod(forcings_split.at(pos));
+        }
       }
-      std::cout << "" << forcings_split.at(3) << '\n';
-      std::cout << name_idx << '\n';
-      std::cout << out_matrix(name_idx, Eigen::all) << '\n';
     }
   }
-  std::cout << '\n' << "out_matrix" << '\n' << out_matrix << '\n';
-  return out_matrix;
+  std::vector<Eigen::MatrixXd> out;
+  out.push_back(e_matrix);
+  out.push_back(c_matrix);
+  out.push_back(f_matrix);
+  return out;
 }
 
-species_struct simple_species_struct(std::vector<std::string> species_names) {
+species_struct simple_species_struct(
+    const std::vector<std::string>& species_names) {
   std::string filename = "../src/weather/data/species_configs_properties.csv";
   species_struct species = utility::species_from_file(filename, species_names);
+
+  species.input_mode.at(0) = "emissions";
+  species.input_mode.at(1) = "emissions";
+  species.input_mode.at(2) = "emissions";
+  species.input_mode.at(3) = "concentrations";
+  species.input_mode.at(4) = "concentrations";
+  species.input_mode.at(5) = "calculated";
+
+  species.greenhouse_gas(3) = 1;
+  species.greenhouse_gas(4) = 1;
+
+
   species_struct erfari(1);
   erfari.name.at(0) = "ERFari";
   erfari.type.at(0) = "ari";
@@ -222,42 +261,41 @@ species_struct simple_species_struct(std::vector<std::string> species_names) {
   erfaci.greenhouse_gas << 0;
   erfaci.aerosol_chemistry_from_emissions << 0;
   erfaci.aerosol_chemistry_from_concentration << 0;
+  species_struct species_out =
+      append_species(species, append_species(erfari, erfaci));
 
-  return append_species(species, append_species(erfari, erfaci));
+  species_out.forcing_scale = Eigen::VectorXd::Ones(8);
+  species_out.tropospheric_adjustment = Eigen::VectorXd::Zero(8);
+  utility::update_species_list_indicies(species_out);
+  return species_out;
 }
 
 /**
  * "True" values that generate a stable system
  */
 Eigen::VectorXd true_prior_expectations() {
-  Eigen::MatrixXd default_prior_expectation = Eigen::MatrixXd::Zero(14, 3);
-  default_prior_expectation.row(0) << 0.6, 1.3, 1;
-  default_prior_expectation.row(1) << 1.1, 1.6, 0.9;
-  default_prior_expectation.row(2) << 1.7, 2.0, 1.1;
-  default_prior_expectation.row(3) << 5, 15, 80;
-  default_prior_expectation.row(4) << 8, 14, 100;
-  default_prior_expectation.row(5) << 6, 11, 75;
-  default_prior_expectation.row(6) << 1.29, 1.1, 0.8;
-  default_prior_expectation.row(7) << 0.5, 0.5, 0.5;
-  default_prior_expectation.row(8) << 0.5, 0.5, 0.5;
-  default_prior_expectation.row(9) << 2, 2, 2;
-  default_prior_expectation.row(10) << 8, 8, 8;
+  Eigen::VectorXd default_prior_expectation = Eigen::VectorXd::Zero(11);
+  default_prior_expectation << 0.6, 1.3, 1, 5, 15, 80, 1.29, 0.5, 0.5, 2, 8;
 
-  Eigen::Map<Eigen::VectorXd> return_default_prior_expectation(
-      default_prior_expectation.data(),
-      default_prior_expectation.rows() * default_prior_expectation.cols());
-  return return_default_prior_expectation;
+  return default_prior_expectation;
 }
 
 parameter_location_weather default_parameter_locations() {
   parameter_location_weather parameter_locations;
-  parameter_locations.ocean_heat_transfer << 0, 1, 2, 3, 4, 5, 6, 7, 8;
-  parameter_locations.ocean_heat_capacity << 9, 10, 11, 12, 13, 14, 15, 16, 17;
-  parameter_locations.deep_ocean_efficacy << 18, 19, 20;
-  parameter_locations.sigma_eta << 21, 22, 23;
-  parameter_locations.sigma_xi << 24, 25, 26;
-  parameter_locations.gamma_autocorrelation << 27, 28, 29;
-  parameter_locations.forcing_4co2 << 30, 31, 32;
+  parameter_locations.ocean_heat_transfer = Eigen::VectorXi(3);
+  parameter_locations.ocean_heat_transfer << 0, 1, 2;
+  parameter_locations.ocean_heat_capacity = Eigen::VectorXi(3);
+  parameter_locations.ocean_heat_capacity << 3, 4, 5;
+  parameter_locations.deep_ocean_efficacy = Eigen::VectorXi(1);
+  parameter_locations.deep_ocean_efficacy << 6;
+  parameter_locations.sigma_eta = Eigen::VectorXi(1);
+  parameter_locations.sigma_eta << 7;
+  parameter_locations.sigma_xi = Eigen::VectorXi(1);
+  parameter_locations.sigma_xi << 8;
+  parameter_locations.gamma_autocorrelation = Eigen::VectorXi(1);
+  parameter_locations.gamma_autocorrelation << 9;
+  parameter_locations.forcing_4co2 = Eigen::VectorXi(1);
+  parameter_locations.forcing_4co2 << 10;
 
   return parameter_locations;
 }
