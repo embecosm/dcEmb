@@ -107,6 +107,10 @@ struct species_struct {
   Eigen::VectorXi ghg_indices;
   Eigen::VectorXi ghg_forward_indices;
   Eigen::VectorXi ghg_inverse_indices;
+  Eigen::VectorXi aerosol_chemistry_from_emissions_indices;
+  Eigen::VectorXi aerosol_chemistry_from_concentration_indices;
+  Eigen::VectorXi ari_indices;
+  Eigen::VectorXi aci_indices;
   species_struct(int i) {
     name = std::vector<std::string>(i);
     type = std::vector<std::string>(i);

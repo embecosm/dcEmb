@@ -14,6 +14,7 @@
 #include "dynamic_weather_model.hh"
 #include "utility.hh"
 
+#include <unsupported/Eigen/MatrixFunctions>
 #include "Eigen/Core"
 #include "Eigen/Dense"
 #include "Eigen/SVD"
@@ -68,12 +69,27 @@ Eigen::VectorXd dynamic_weather_model::forward_model(
  * runge-kutta method
  */
 Eigen::MatrixXd dynamic_weather_model::eval_generative(
-    const Eigen::VectorXd& parameters,
-    const parameter_location_weather& parameter_locations,
+    const Eigen::VectorXd& parameters, const parameter_location_weather& pl,
     const int& timeseries_length) {
   // TODO IF
 
   species_struct sl = this->species_list;
+
+  DEBUG(temperature.rows());
+
+  Eigen::MatrixXd eb_matrix = calculate_eb_matrix(
+      pl.ocean_heat_transfer.size(), parameters(pl.deep_ocean_efficacy).value(),
+      parameters(pl.gamma_autocorrelation).value(),
+      parameters(pl.ocean_heat_transfer), parameters(pl.ocean_heat_capacity));
+
+  DEBUG(eb_matrix);
+  Eigen::MatrixXd eb_matrix_d = eb_matrix.exp();
+
+  Eigen::VectorXd forcing_vector = Eigen::VectorXd::Zero(4);
+  forcing_vector(0) = parameters(pl.gamma_autocorrelation).value();
+
+  Eigen::VectorXd forcing_vector_d = eb_matrix.colPivHouseholderQr().solve(
+      (eb_matrix_d - Eigen::MatrixXd::Identity(4, 4)) * forcing_vector);
 
   this->emissions(species_list.co2_indices, Eigen::all) =
       this->emissions(species_list.co2_afolu_indices, Eigen::all) +
@@ -112,7 +128,7 @@ Eigen::MatrixXd dynamic_weather_model::eval_generative(
       sl.g1(sl.ghg_indices), sl.iirf_0(sl.ghg_indices),
       sl.iirf_airborne(sl.ghg_indices), sl.iirf_temperature(sl.ghg_indices),
       sl.iirf_uptake(sl.ghg_indices),
-      cummins_state_array(Eigen::seq(1, Eigen::last), 0), 100);
+      cummins_state_array(1, 0), 100);
 
   std::vector<Eigen::MatrixXd> con_step = step_concentration(
       emissions(sl.ghg_forward_indices, 0),
@@ -141,7 +157,7 @@ Eigen::MatrixXd dynamic_weather_model::eval_generative(
       sl.unperturbed_lifetime(Eigen::all, sl.ghg_inverse_indices),
       sl.partition_fraction(Eigen::all, sl.ghg_inverse_indices), 1);
 
-  emissions(sl.ghg_inverse_indices, 1) = em_step.at(0);
+  emissions(sl.ghg_inverse_indices, 0) = em_step.at(0);
   gas_partitions_array(sl.ghg_inverse_indices, Eigen::all) =
       em_step.at(1).transpose();
   airborne_emissions(sl.ghg_inverse_indices, 1) = em_step.at(2);
@@ -158,7 +174,38 @@ Eigen::MatrixXd dynamic_weather_model::eval_generative(
   forcings(sl.ghg_indices, 1) =
       (ghg_forcing_unoffset - ghg_forcing_offset)(sl.ghg_indices);
 
-  DEBUG(forcings(Eigen::all, 1))
+  forcings(sl.ari_indices, 1) = calculate_erafi_forcing(
+      emissions(Eigen::all, 0), concentrations(Eigen::all, 1),
+      sl.baseline_emissions, sl.baseline_concentration, forcing_scale_array,
+      sl.erfari_radiative_efficiency,
+      sl.aerosol_chemistry_from_emissions_indices,
+      sl.aerosol_chemistry_from_concentration_indices);
+
+  forcings(sl.aci_indices, 1) = calculate_eraci_forcing(
+      emissions(Eigen::all, 0), concentrations(Eigen::all, 1),
+      sl.baseline_emissions, sl.baseline_concentration, forcing_scale_array,
+      sl.aci_scale, sl.aci_shape, sl.aerosol_chemistry_from_emissions_indices,
+      sl.aerosol_chemistry_from_concentration_indices);
+
+  Eigen::VectorXd forcing_feedback =
+      Eigen::VectorXd::Ones(forcings.rows()) * cummins_state_array(0, 1);
+  forcings(Eigen::all, 1) =
+      forcings(Eigen::all, 1).array() +
+      (forcing_feedback.array() * sl.forcing_temperature_feedback.array());
+
+  forcing_sum_array(1) =
+      (forcings(Eigen::all, 1).array() * sl.forcing_efficacy.array())
+          .array()
+          .sum();
+
+  Eigen::VectorXd out = step_temperature(
+      cummins_state_array(Eigen::all, 0),
+      eb_matrix_d,
+      forcing_vector_d,
+      forcing_sum_array(1)
+  );
+
+  DEBUG(out);
 
   return Eigen::MatrixXd::Zero(1, 1);
 }
@@ -253,9 +300,9 @@ Eigen::VectorXd dynamic_weather_model::calculate_alpha(
     const Eigen::VectorXd& g1, const Eigen::VectorXd& iirf_0,
     const Eigen::VectorXd& iirf_airborne,
     const Eigen::VectorXd& iirf_temperature, const Eigen::VectorXd& iirf_uptake,
-    const Eigen::VectorXd& temperature, double iirf_max) {
+    const double& temperature, double iirf_max) {
   Eigen::VectorXd temperature_vec =
-      Eigen::VectorXd::Ones(iirf_0.size()) * temperature.value();
+      Eigen::VectorXd::Ones(iirf_0.size()) * temperature;
 
   Eigen::VectorXd iirf_im1 =
       iirf_0.array() +
@@ -366,6 +413,113 @@ std::vector<Eigen::MatrixXd> dynamic_weather_model::unstep_concentration(
 
   return out_mat;
 }
+
+Eigen::VectorXd dynamic_weather_model::calculate_erafi_forcing(
+    const Eigen::VectorXd& emissions, const Eigen::VectorXd& concentrations,
+    const Eigen::VectorXd& baseline_emissions,
+    const Eigen::VectorXd& baseline_concentration,
+    const Eigen::VectorXd& forcing_scale_array,
+    const Eigen::VectorXd& radiative_efficiency,
+    const Eigen::VectorXi& emissions_indices,
+    const Eigen::VectorXi& concentrations_indices) {
+  Eigen::VectorXd erf_out = Eigen::VectorXd::Zero(emissions.size());
+
+  erf_out(emissions_indices) =
+      ((emissions(emissions_indices) - baseline_emissions(emissions_indices))
+           .array() *
+       radiative_efficiency(emissions_indices).array()) *
+      forcing_scale_array(emissions_indices).array();
+
+  erf_out(concentrations_indices) =
+      ((concentrations(concentrations_indices) -
+        baseline_concentration(concentrations_indices))
+           .array() *
+       radiative_efficiency(concentrations_indices).array()) *
+      forcing_scale_array(concentrations_indices).array();
+
+  // Hack: currently we're summing outputs for simplicity. We may not in future!
+  return Eigen::VectorXd::Ones(1) * erf_out.sum();
+}
+
+Eigen::VectorXd dynamic_weather_model::calculate_eraci_forcing(
+    const Eigen::VectorXd& emissions, const Eigen::VectorXd& concentrations,
+    const Eigen::VectorXd& baseline_emissions,
+    const Eigen::VectorXd& baseline_concentration,
+    const Eigen::VectorXd& forcing_scale_array, const Eigen::VectorXd& scale,
+    const Eigen::VectorXd& sensitivity, const Eigen::VectorXi& slcf_indices,
+    const Eigen::VectorXi& ghg_indices) {
+  Eigen::VectorXd radiative_effect =
+      scale(slcf_indices) *
+      log(1 +
+          (sensitivity(slcf_indices).array() * emissions(slcf_indices).array())
+              .sum() +
+          (sensitivity(ghg_indices).array() *
+           concentrations(ghg_indices).array())
+              .sum());
+
+  Eigen::VectorXd baseline_radiative_effect =
+      scale(slcf_indices) * log(1 +
+                                (sensitivity(slcf_indices).array() *
+                                 baseline_emissions(slcf_indices).array())
+                                    .sum() +
+                                (sensitivity(ghg_indices).array() *
+                                 baseline_concentration(ghg_indices).array())
+                                    .sum());
+
+  Eigen::VectorXd erf_out =
+      (radiative_effect - baseline_radiative_effect).array() *
+      forcing_scale_array(slcf_indices).array();
+
+  return erf_out;
+}
+
+Eigen::VectorXd dynamic_weather_model::step_temperature(
+    const Eigen::VectorXd& state_old, const Eigen::MatrixXd& eb_matrix_d,
+    const Eigen::VectorXd& forcing_vector_d, const double& forcing) {
+
+
+  DEBUG(state_old);
+  DEBUG(eb_matrix_d);
+  DEBUG(forcing_vector_d);
+  DEBUG(forcing);
+
+  Eigen::VectorXd state_new = (eb_matrix_d * state_old).array() +
+                              (forcing_vector_d.array() * forcing);
+  return state_new;
+}
+
+// n_box is currently hardcoded to be 3. TODO: 2 and 4.
+Eigen::MatrixXd dynamic_weather_model::calculate_eb_matrix(
+    const int& n_box, const double& deep_ocean_efficacy,
+    const double& gamma_autocorrelation,
+    const Eigen::VectorXd& ocean_heat_transfer,
+    const Eigen::VectorXd& ocean_heat_capacity) {
+  Eigen::MatrixXd eb_matrix = Eigen::MatrixXd::Zero(n_box + 1, n_box + 1);
+  Eigen::VectorXd epsilon_array = Eigen::VectorXd::Ones(n_box);
+  epsilon_array(n_box - 2) = deep_ocean_efficacy;
+
+  eb_matrix(1, 1) =
+      -(ocean_heat_transfer(0) + epsilon_array(0) * ocean_heat_transfer(1)) /
+      ocean_heat_capacity(0);
+  eb_matrix(1, 2) =
+      epsilon_array(0) * ocean_heat_transfer(1) / ocean_heat_capacity(0);
+
+  eb_matrix(2, 1) = ocean_heat_transfer(1) / ocean_heat_capacity(1);
+  eb_matrix(2, 2) =
+      -(ocean_heat_transfer(1) + epsilon_array(1) * ocean_heat_transfer(2)) /
+      ocean_heat_capacity(1);
+  eb_matrix(2, 3) =
+      epsilon_array(1) * ocean_heat_transfer(2) / ocean_heat_capacity(1);
+
+  eb_matrix(3, 2) = ocean_heat_transfer(2) / ocean_heat_capacity(2);
+  eb_matrix(3, 3) = -eb_matrix(2, 1);
+
+  eb_matrix(0, 0) = -gamma_autocorrelation;
+  eb_matrix(1, 0) = 1 / ocean_heat_capacity(0);
+
+  return eb_matrix;
+}
+
 /**
  * Dynamic Causal Model constructor for the weather problem
  */

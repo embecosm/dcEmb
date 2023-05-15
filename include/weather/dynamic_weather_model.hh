@@ -67,7 +67,7 @@ class dynamic_weather_model : public dynamic_model {
                                   const Eigen::VectorXd& iirf_airborne,
                                   const Eigen::VectorXd& iirf_temperature,
                                   const Eigen::VectorXd& iirf_uptake,
-                                  const Eigen::VectorXd& cummins_state_array,
+                                  const double& cummins_state_array,
                                   double iirf_max);
   std::vector<Eigen::MatrixXd> step_concentration(
       const Eigen::VectorXd& emissions, const Eigen::MatrixXd& gasboxes_old,
@@ -88,6 +88,30 @@ class dynamic_weather_model : public dynamic_model {
       const Eigen::VectorXd& concentration_per_emission,
       const Eigen::MatrixXd& lifetime,
       const Eigen::MatrixXd& partition_fraction, int timestep);
+  Eigen::VectorXd calculate_erafi_forcing(
+      const Eigen::VectorXd& emissions, const Eigen::VectorXd& concentrations,
+      const Eigen::VectorXd& baseline_emissions,
+      const Eigen::VectorXd& baseline_concentration,
+      const Eigen::VectorXd& forcing_scale_array,
+      const Eigen::VectorXd& erafi_radiative_efficiency,
+      const Eigen::VectorXi& emissions_indices,
+      const Eigen::VectorXi& concentration_indices);
+  Eigen::VectorXd calculate_eraci_forcing(
+      const Eigen::VectorXd& emissions, const Eigen::VectorXd& concentrations,
+      const Eigen::VectorXd& baseline_emissions,
+      const Eigen::VectorXd& baseline_concentration,
+      const Eigen::VectorXd& forcing_scale_array, const Eigen::VectorXd& scale,
+      const Eigen::VectorXd& sensitivity, const Eigen::VectorXi& slcf_indices,
+      const Eigen::VectorXi& ghg_indices);
+  Eigen::VectorXd step_temperature(const Eigen::VectorXd& state_old,
+                                   const Eigen::MatrixXd& eb_matrix_d,
+                                   const Eigen::VectorXd& forcing_vector_d,
+                                   const double& forcing);
+  Eigen::MatrixXd calculate_eb_matrix(
+      const int& n_box, const double& deep_ocean_efficacy,
+      const double& gamma_autocorrelation,
+      const Eigen::VectorXd& ocean_heat_transfer,
+      const Eigen::VectorXd& ocean_heat_capacity);
   dynamic_weather_model();
 };
 

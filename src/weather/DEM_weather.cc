@@ -51,7 +51,7 @@ int run_weather_test() {
   model.concentrations(4, Eigen::all) = Eigen::VectorXd::Ones(sz) * 325;
   model.concentrations(5, 0) = 278.3;
 
-  model.temperature = Eigen::MatrixXd::Zero(1, sz);
+  model.temperature = Eigen::MatrixXd::Zero(3, sz);
   model.airborne_emissions =
       Eigen::MatrixXd::Zero(model.species_list.name.size(), sz);
   model.cumulative_emissions =
@@ -245,6 +245,9 @@ species_struct simple_species_struct(
   species.greenhouse_gas(3) = 1;
   species.greenhouse_gas(4) = 1;
 
+  species.baseline_emissions(2) = 0;
+  species.aci_shape = Eigen::VectorXd::Zero(6);
+  species.aci_shape(2) = 1/260.34644166;
 
   species_struct erfari(1);
   erfari.name.at(0) = "ERFari";
@@ -253,6 +256,7 @@ species_struct simple_species_struct(
   erfari.greenhouse_gas << 0;
   erfari.aerosol_chemistry_from_emissions << 0;
   erfari.aerosol_chemistry_from_concentration << 0;
+  erfari.forcing_efficacy << 1;
 
   species_struct erfaci(1);
   erfaci.name.at(0) = "ERFaci";
@@ -261,11 +265,13 @@ species_struct simple_species_struct(
   erfaci.greenhouse_gas << 0;
   erfaci.aerosol_chemistry_from_emissions << 0;
   erfaci.aerosol_chemistry_from_concentration << 0;
+  erfaci.forcing_efficacy << 1;
   species_struct species_out =
       append_species(species, append_species(erfari, erfaci));
 
   species_out.forcing_scale = Eigen::VectorXd::Ones(8);
   species_out.tropospheric_adjustment = Eigen::VectorXd::Zero(8);
+  species_out.aci_scale = Eigen::VectorXd::Ones(8) * -2.09841432;
   utility::update_species_list_indicies(species_out);
   return species_out;
 }
