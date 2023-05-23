@@ -32,7 +32,7 @@
  * Run the COVID example
  */
 int run_COVID_test() {
-  bool OCTAVE_INVERSIONS = 1;
+  bool OCTAVE_INVERSIONS = 0;
   int num_countries = 5;
   std::vector<dynamic_COVID_model> GCM;
   std::vector<country_data> countries = read_country_data(num_countries);
@@ -59,7 +59,7 @@ int run_COVID_test() {
         COVID_model.select_response_vars = select_response_vars;
         COVID_model.num_response_vars = 2;
         COVID_model.response_vars = response_vars;
-        COVID_model.max_invert_it = 128;
+        COVID_model.max_invert_it = 2;
         COVID_model.invert_model();
 
         if (STORE) {
@@ -137,14 +137,14 @@ int run_COVID_test() {
     (GCM_empirical[i]).invert_model();
   }
 
-  for (int i = 0; i < num_countries; i++) {
-    country_data country = countries.at(i);
-    {
-      std::ifstream infile("DCM_COVID_" + country.name);
-      cereal::BinaryInputArchive archive_in(infile);
-      archive_in >> GCM_empirical[i];
-    }
-  }
+  // for (int i = 0; i < num_countries; i++) {
+  //   country_data country = countries.at(i);
+  //   {
+  //     std::ifstream infile("DCM_COVID_" + country.name);
+  //     cereal::BinaryInputArchive archive_in(infile);
+  //     archive_in >> GCM_empirical[i];
+  //   }
+  // }
 
   return 0;
 }

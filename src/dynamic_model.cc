@@ -29,7 +29,6 @@
     std::cout << duration.count() << std::endl;                              \
   }
 
-
 void dynamic_model::invert_model() {
   Eigen::MatrixXd response_vars_fs = this->get_observed_outcomes();
   int num_response_total = this->num_response_vars * this->num_samples;
@@ -109,7 +108,6 @@ void dynamic_model::invert_model() {
       i_cov_comp =
           Eigen::MatrixXd::Zero(num_response_total, num_response_total);
       for (int l = 0; l < num_precision_comp; l++) {
-      
         i_cov_comp =
             i_cov_comp + (precision_comp[l] * (exp(-32) + exp(h_estimate(l))));
       }
@@ -154,7 +152,8 @@ void dynamic_model::invert_model() {
       conditional_h_cov = utility::inverse_tol(-dFdhh);
       Eigen::VectorXd dh = utility::dx(dFdhh, dFdh, ascent_rate);
       dh = (dh.unaryExpr(
-          [](double x) { return std::min(std::max(x, -1.0), 1.0); })).eval();
+                [](double x) { return std::min(std::max(x, -1.0), 1.0); }))
+               .eval();
       h_estimate = h_estimate + dh;
       double dFh = dFdh.transpose() * dh;
 

@@ -22,22 +22,32 @@
 #include "dynamic_weather_model.hh"
 #include "species_struct.hh"
 #include "utility.hh"
+#define DEBUG(x) std::cout << #x << "= " << '\n' << x << std::endl;
 
 /**
  * Run the weather example
  */
 int run_weather_test() {
   dynamic_weather_model model;
-  // Add Sulphur?
+  model.prior_parameter_expectations = default_prior_expectations();
+  model.prior_parameter_covariances = default_prior_covariances();
+  model.prior_hyper_expectations = default_hyper_expectations();
+  model.prior_hyper_covariances = default_hyper_covariances();
+  model.parameter_locations = default_parameter_locations();
+
+  int start_date = 2000;
+  int end_date = 2050;
+  int sz = end_date - start_date + 1;
+  model.num_samples = sz;
+
+  model.num_response_vars = 8;
+  model.select_response_vars =
+      (Eigen::VectorXi(8) << 0, 1, 2, 3, 4, 5, 6, 7).finished();
   std::vector<std::string> species_names(
       {"CO2 FFI", "CO2 AFOLU", "Sulfur", "CH4", "N2O", "CO2"});
-  model.species_list = simple_species_struct(species_names);
-  // model.species_list.input_mode[2] = "concentrations";
 
-  int start_date = 1701;
-  int end_date = 1710;
-  int sz = end_date - start_date + 1;
-  // model.num_samples = sz;
+  model.species_list = simple_species_struct(species_names);
+
   std::vector<Eigen::MatrixXd> ecf =
       simple_ecf(model.species_list, "ssp119", start_date, end_date);
   model.emissions = ecf.at(0);
@@ -50,16 +60,100 @@ int run_weather_test() {
   model.concentrations(3, Eigen::all) = Eigen::VectorXd::Ones(sz) * 1800;
   model.concentrations(4, Eigen::all) = Eigen::VectorXd::Ones(sz) * 325;
   model.concentrations(5, 0) = 278.3;
-
   model.temperature = Eigen::MatrixXd::Zero(3, sz);
   model.airborne_emissions =
       Eigen::MatrixXd::Zero(model.species_list.name.size(), sz);
   model.cumulative_emissions =
       Eigen::MatrixXd::Zero(model.species_list.name.size(), sz);
 
-  model.eval_generative(true_prior_expectations(),
-                        default_parameter_locations(), sz);
+  Eigen::MatrixXd true_out = model.eval_generative(
+      true_prior_expectations(), default_parameter_locations(), sz);
 
+  model.response_vars = true_out(Eigen::all, model.select_response_vars);
+
+  model.invert_model();
+
+  Eigen::MatrixXd prior_e_out = model.eval_generative(
+      default_prior_expectations(), default_parameter_locations(), sz);
+
+  Eigen::MatrixXd posterior_e_out =
+      model.eval_generative(model.conditional_parameter_expectations,
+                            default_parameter_locations(), sz);
+
+  Eigen::MatrixXd prior_c_out_m = model.eval_generative(
+      default_prior_expectations(), default_parameter_locations(), sz);
+  Eigen::MatrixXd posterior_c_out_m =
+      model.eval_generative(model.conditional_parameter_expectations,
+                            default_parameter_locations(), sz);
+
+  Eigen::MatrixXd prior_c_out_v =
+      Eigen::MatrixXd::Zero(prior_c_out_m.rows(), prior_c_out_m.cols());
+  Eigen::MatrixXd posterior_c_out_v =
+      Eigen::MatrixXd::Zero(posterior_c_out_m.rows(), posterior_c_out_m.cols());
+
+  std::default_random_engine rd;
+  std::mt19937 gen(rd());
+  std::normal_distribution<double> dis(0, 1);
+
+  int n = 1000;
+  for (int i = 1; i < n; i++) {
+    std::cout << "simulating variance: " << i << '\n';
+    Eigen::VectorXd rand_param_prior =
+        Eigen::VectorXd::Zero(model.prior_parameter_expectations.size())
+            .unaryExpr([&](double dummy) { return dis(gen); });
+
+    rand_param_prior = ((rand_param_prior.array() *
+                         model.prior_parameter_covariances.diagonal().array()) +
+                        model.prior_parameter_expectations.array())
+                           .eval();
+    Eigen::MatrixXd prior_tmp = model.eval_generative(
+        rand_param_prior, default_parameter_locations(), sz);
+    Eigen::MatrixXd prior_c_out_m_old = prior_c_out_m;
+    prior_c_out_m = prior_c_out_m_old.array() +
+                    ((prior_tmp - prior_c_out_m_old).array() / i);
+    prior_c_out_v =
+        (prior_c_out_v.array() + (prior_tmp - prior_c_out_m_old).array() *
+                                     (prior_tmp - prior_c_out_m).array())
+            .eval();
+
+    Eigen::VectorXd rand_param_posterior =
+        Eigen::VectorXd::Zero(model.conditional_parameter_expectations.size())
+            .unaryExpr([&](double dummy) { return dis(gen); });
+
+    rand_param_posterior =
+        ((rand_param_posterior.array() *
+          model.conditional_parameter_covariances.diagonal().array()) +
+         model.conditional_parameter_expectations.array())
+            .eval();
+    Eigen::MatrixXd posterior_tmp = model.eval_generative(
+        rand_param_posterior, default_parameter_locations(), sz);
+    Eigen::MatrixXd posterior_c_out_m_old = posterior_c_out_m;
+    posterior_c_out_m = posterior_c_out_m_old.array() +
+                        ((posterior_tmp - posterior_c_out_m_old).array() / i);
+    posterior_c_out_v = (posterior_c_out_v.array() +
+                         (posterior_tmp - posterior_c_out_m_old).array() *
+                             (posterior_tmp - posterior_c_out_m).array())
+                            .eval();
+  }
+
+  Eigen::MatrixXd prior_c_out = prior_c_out_v.array() / n;
+  Eigen::MatrixXd posterior_c_out = posterior_c_out_v.array() / n;
+
+  // for (int i = i; i < n; i++) {
+
+  // }
+
+  utility::print_matrix("../visualisation/weather/true_generative.csv",
+                        true_out);
+  utility::print_matrix("../visualisation/weather/prior_generative.csv",
+                        prior_e_out);
+  utility::print_matrix("../visualisation/weather/prior_generative_var.csv",
+                        prior_c_out);
+  utility::print_matrix("../visualisation/weather/pos_generative.csv",
+                        posterior_e_out);
+  utility::print_matrix("../visualisation/weather/pos_generative_var.csv",
+                        posterior_c_out);
+  // std::cout << "temperature" << true_out(25, Eigen::all) << '\n';
   return 0;
 }
 
@@ -247,7 +341,7 @@ species_struct simple_species_struct(
 
   species.baseline_emissions(2) = 0;
   species.aci_shape = Eigen::VectorXd::Zero(6);
-  species.aci_shape(2) = 1/260.34644166;
+  species.aci_shape(2) = 1 / 260.34644166;
 
   species_struct erfari(1);
   erfari.name.at(0) = "ERFari";
@@ -310,21 +404,11 @@ parameter_location_weather default_parameter_locations() {
  * Prior expectations on position
  */
 Eigen::VectorXd default_prior_expectations() {
-  Eigen::MatrixXd default_prior_expectation = Eigen::MatrixXd::Zero(7, 3);
-  double x = 0.04;
-  default_prior_expectation.row(0) << 1 - x, 1 + x, 1 + x;
-  default_prior_expectation.row(1) << 0.97000436 + x, -0.97000436 - x, 0 + x;
-  default_prior_expectation.row(2) << -0.24308753 + x, 0.24308753 + x, 0 - x;
-  default_prior_expectation.row(3) << 0 + x, 0 + x, 0 - x;
-  default_prior_expectation.row(4) << 0.93240737 / 2 + x, 0.93240737 / 2 - x,
-      -0.93240737 + x;
-  default_prior_expectation.row(5) << 0.86473146 / 2 + x, 0.86473146 / 2 - x,
-      -0.86473146 - x;
-  default_prior_expectation.row(6) << 0 + x, 0 - x, 0 + x;
-  Eigen::Map<Eigen::VectorXd> return_default_prior_expectation(
-      default_prior_expectation.data(),
-      default_prior_expectation.rows() * default_prior_expectation.cols());
-  return return_default_prior_expectation;
+  Eigen::VectorXd default_prior_expectation = Eigen::VectorXd::Zero(11);
+  default_prior_expectation << 0.6 + 0.5, 1.3 - 0.5, 1 + 0.5, 5 - 0.5, 15 + 0.5,
+      80 - 0.5, 1.29 + 0.5, 0.5 - 0.5, 0.5 + 0.5, 2 - 0.5, 8 + 0.5;
+
+  return default_prior_expectation;
 }
 
 /**
@@ -332,23 +416,20 @@ Eigen::VectorXd default_prior_expectations() {
  */
 Eigen::MatrixXd default_prior_covariances() {
   double flat = 1.0;                    // flat priors
-  double informative = 1 / (double)16;  // informative priors
+  // double informative = 1 / (double)16;  // informative priors
+  double informative = 1 / (double)2;  // informative priors
   double precise = 1 / (double)256;     // precise priors
   double fixed = 1 / (double)2048;      // fixed priors
-  Eigen::MatrixXd default_prior_covariance = Eigen::MatrixXd::Zero(7, 3);
-  default_prior_covariance.row(0) = Eigen::VectorXd::Constant(3, informative);
-  default_prior_covariance.row(1) = Eigen::VectorXd::Constant(3, informative);
-  default_prior_covariance.row(2) = Eigen::VectorXd::Constant(3, informative);
-  default_prior_covariance.row(3) = Eigen::VectorXd::Constant(3, informative);
-  default_prior_covariance.row(4) = Eigen::VectorXd::Constant(3, informative);
-  default_prior_covariance.row(5) = Eigen::VectorXd::Constant(3, informative);
-  default_prior_covariance.row(6) = Eigen::VectorXd::Constant(3, informative);
-  Eigen::Map<Eigen::VectorXd> default_prior_covariance_diag(
-      default_prior_covariance.data(),
-      default_prior_covariance.rows() * default_prior_covariance.cols());
+  Eigen::VectorXd default_prior_covariance = Eigen::VectorXd::Zero(11);
+  default_prior_covariance << informative, informative, informative,
+      informative, informative, informative, informative, informative,
+      informative, informative, informative;
+  // default_prior_covariance << flat, flat, flat, flat, flat, flat, flat, flat,
+  //     flat, flat, flat;
+
   Eigen::MatrixXd return_default_prior_covariance =
-      Eigen::MatrixXd::Zero(21, 21);
-  return_default_prior_covariance.diagonal() = default_prior_covariance_diag;
+      Eigen::MatrixXd::Zero(11, 11);
+  return_default_prior_covariance.diagonal() = default_prior_covariance;
   return return_default_prior_covariance;
 }
 
@@ -356,14 +437,19 @@ Eigen::MatrixXd default_prior_covariances() {
  * Prior hyperparameter expectation vector
  */
 Eigen::VectorXd default_hyper_expectations() {
-  Eigen::VectorXd default_hyper_expectation = Eigen::VectorXd::Zero(3);
+  Eigen::VectorXd default_hyper_expectation = Eigen::VectorXd::Zero(8);
   return default_hyper_expectation;
 }
 /**
  * Prior hyperparameter covariance matrix
  */
 Eigen::MatrixXd default_hyper_covariances() {
-  Eigen::MatrixXd default_hyper_covariance = Eigen::MatrixXd::Zero(3, 3);
-  default_hyper_covariance.diagonal() << 1.0 / 256.0, 1.0 / 256.0, 1.0 / 256.0;
+  double flat = 1.0;                    // flat priors
+  double informative = 1 / (double)16;  // informative priors
+  double precise = 1 / (double)256;     // precise priors
+  double fixed = 1 / (double)2048;      // fixed priors
+  Eigen::MatrixXd default_hyper_covariance = Eigen::MatrixXd::Zero(8, 8);
+  default_hyper_covariance.diagonal() << precise, precise, precise, precise,
+      precise, precise, precise, precise;
   return default_hyper_covariance;
 }

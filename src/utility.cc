@@ -567,10 +567,10 @@ void utility::update_species_list_indicies(species_struct& species_struct) {
     if (species_struct.greenhouse_gas(i)) {
       ghg_indices_tmp.push_back(i);
     }
-    if (species_struct.type.at(i) == "aci") {
+    if (species_struct.type.at(i) == "ari") {
       ari_indices_tmp.push_back(i);
     }
-    if (species_struct.type.at(i) == "ari") {
+    if (species_struct.type.at(i) == "aci") {
       aci_indices_tmp.push_back(i);
     }
     if (species_struct.aerosol_chemistry_from_emissions(i)) {

@@ -29,7 +29,6 @@
 
 #define PL parameter_locations
 #define ZERO(a, b) Eigen::MatrixXd::Zero(a, b)
-#define DEBUG(x) std::cout << #x << "= " << x << std::endl;
 /**
  * Observed outcomes for the weather problem.
  */
@@ -73,16 +72,19 @@ Eigen::MatrixXd dynamic_weather_model::eval_generative(
     const int& timeseries_length) {
   // TODO IF
 
+  Eigen::MatrixXd emissions_array = this->emissions;
+  Eigen::MatrixXd forcings_array = this->forcings;
+  Eigen::MatrixXd concentrations_array = this->concentrations;
+  Eigen::MatrixXd temperature_array = this->temperature;
+  Eigen::MatrixXd airborne_emissions_array = this->airborne_emissions;
+  Eigen::MatrixXd cumulative_emissions_array = this->cumulative_emissions;
   species_struct sl = this->species_list;
-
-  DEBUG(temperature.rows());
 
   Eigen::MatrixXd eb_matrix = calculate_eb_matrix(
       pl.ocean_heat_transfer.size(), parameters(pl.deep_ocean_efficacy).value(),
       parameters(pl.gamma_autocorrelation).value(),
       parameters(pl.ocean_heat_transfer), parameters(pl.ocean_heat_capacity));
 
-  DEBUG(eb_matrix);
   Eigen::MatrixXd eb_matrix_d = eb_matrix.exp();
 
   Eigen::VectorXd forcing_vector = Eigen::VectorXd::Zero(4);
@@ -91,26 +93,30 @@ Eigen::MatrixXd dynamic_weather_model::eval_generative(
   Eigen::VectorXd forcing_vector_d = eb_matrix.colPivHouseholderQr().solve(
       (eb_matrix_d - Eigen::MatrixXd::Identity(4, 4)) * forcing_vector);
 
-  this->emissions(species_list.co2_indices, Eigen::all) =
-      this->emissions(species_list.co2_afolu_indices, Eigen::all) +
-      this->emissions(species_list.co2_ffi_indices, Eigen::all);
+  emissions_array(species_list.co2_indices, Eigen::all) =
+      emissions_array(species_list.co2_afolu_indices, Eigen::all) +
+      emissions_array(species_list.co2_ffi_indices, Eigen::all);
 
   for (int i = 1; i < timeseries_length; i++) {
-    cumulative_emissions(Eigen::all, i) =
-        cumulative_emissions(Eigen::all, i - 1) + emissions(Eigen::all, i);
+    cumulative_emissions_array(Eigen::all, i) =
+        cumulative_emissions_array(Eigen::all, i - 1) +
+        emissions_array(Eigen::all, i);
   }
 
   Eigen::VectorXd forcing_sum_array = Eigen::VectorXd::Zero(timeseries_length);
-  forcing_sum_array(0) = this->forcings(Eigen::all, 0).array().sum();
+  forcing_sum_array(0) = forcings_array(Eigen::all, 0).array().sum();
+
+  Eigen::VectorXd forcing_efficacy_sum_array =
+      Eigen::VectorXd::Zero(timeseries_length);
 
   Eigen::VectorXd forcing_scale_array =
       sl.forcing_scale.array() * (sl.tropospheric_adjustment.array() + 1.0);
 
   Eigen::MatrixXd cummins_state_array =
-      Eigen::MatrixXd::Zero(temperature.rows() + 1, timeseries_length);
+      Eigen::MatrixXd::Zero(temperature_array.rows() + 1, timeseries_length);
   cummins_state_array(0, Eigen::all) = forcing_sum_array;
-  cummins_state_array(Eigen::seqN(1, this->temperature.rows()), Eigen::all) =
-      this->temperature;
+  cummins_state_array(Eigen::seqN(1, temperature_array.rows()), Eigen::all) =
+      temperature_array;
 
   Eigen::MatrixXd alpha_lifetime_array =
       Eigen::MatrixXd::Zero(sl.name.size(), timeseries_length);
@@ -122,92 +128,106 @@ Eigen::MatrixXd dynamic_weather_model::eval_generative(
       forcing_scale_array, sl.greenhouse_gas_radiative_efficiency,
       sl.co2_indices, sl.ch4_indices, sl.n2o_indices, sl.other_gh_indices);
 
-  alpha_lifetime_array(sl.ghg_indices, 0) = calculate_alpha(
-      airborne_emissions((sl.ghg_indices), 0),
-      cumulative_emissions((sl.ghg_indices), 0), sl.g0(sl.ghg_indices),
-      sl.g1(sl.ghg_indices), sl.iirf_0(sl.ghg_indices),
-      sl.iirf_airborne(sl.ghg_indices), sl.iirf_temperature(sl.ghg_indices),
-      sl.iirf_uptake(sl.ghg_indices),
-      cummins_state_array(1, 0), 100);
+  for (int i = 0; i < timeseries_length - 1; i++) {
+    alpha_lifetime_array(sl.ghg_indices, i) = calculate_alpha(
+        airborne_emissions_array((sl.ghg_indices), i),
+        cumulative_emissions_array((sl.ghg_indices), i), sl.g0(sl.ghg_indices),
+        sl.g1(sl.ghg_indices), sl.iirf_0(sl.ghg_indices),
+        sl.iirf_airborne(sl.ghg_indices), sl.iirf_temperature(sl.ghg_indices),
+        sl.iirf_uptake(sl.ghg_indices), cummins_state_array(1, i), 100);
 
-  std::vector<Eigen::MatrixXd> con_step = step_concentration(
-      emissions(sl.ghg_forward_indices, 0),
-      gas_partitions_array(sl.ghg_forward_indices, Eigen::all),
-      airborne_emissions(sl.ghg_forward_indices, 0),
-      alpha_lifetime_array(sl.ghg_forward_indices, 0),
-      sl.baseline_concentration(sl.ghg_forward_indices),
-      sl.baseline_emissions(sl.ghg_forward_indices),
-      sl.concentration_per_emission(sl.ghg_forward_indices),
-      sl.unperturbed_lifetime(Eigen::all, sl.ghg_forward_indices),
-      sl.partition_fraction(Eigen::all, sl.ghg_forward_indices), 1);
+    std::vector<Eigen::MatrixXd> con_step = step_concentration(
+        emissions_array(sl.ghg_forward_indices, i),
+        gas_partitions_array(sl.ghg_forward_indices, Eigen::all),
+        airborne_emissions_array(sl.ghg_forward_indices, i + 1),
+        alpha_lifetime_array(sl.ghg_forward_indices, i),
+        sl.baseline_concentration(sl.ghg_forward_indices),
+        sl.baseline_emissions(sl.ghg_forward_indices),
+        sl.concentration_per_emission(sl.ghg_forward_indices),
+        sl.unperturbed_lifetime(Eigen::all, sl.ghg_forward_indices),
+        sl.partition_fraction(Eigen::all, sl.ghg_forward_indices), 1);
 
-  concentrations(sl.ghg_forward_indices, 1) = con_step.at(0);
-  gas_partitions_array(sl.ghg_forward_indices, Eigen::all) =
-      con_step.at(1).transpose();
-  airborne_emissions(sl.ghg_forward_indices, 1) = con_step.at(2);
+    concentrations_array(sl.ghg_forward_indices, i + 1) = con_step.at(0);
+    gas_partitions_array(sl.ghg_forward_indices, Eigen::all) =
+        con_step.at(1).transpose();
+    airborne_emissions_array(sl.ghg_forward_indices, i + 1) = con_step.at(2);
 
-  std::vector<Eigen::MatrixXd> em_step = unstep_concentration(
-      concentrations(sl.ghg_inverse_indices, 1),
-      gas_partitions_array(sl.ghg_inverse_indices, Eigen::all),
-      airborne_emissions(sl.ghg_inverse_indices, 0),
-      alpha_lifetime_array(sl.ghg_inverse_indices, 0),
-      sl.baseline_concentration(sl.ghg_inverse_indices),
-      sl.baseline_emissions(sl.ghg_inverse_indices),
-      sl.concentration_per_emission(sl.ghg_inverse_indices),
-      sl.unperturbed_lifetime(Eigen::all, sl.ghg_inverse_indices),
-      sl.partition_fraction(Eigen::all, sl.ghg_inverse_indices), 1);
+    std::vector<Eigen::MatrixXd> em_step = unstep_concentration(
+        concentrations_array(sl.ghg_inverse_indices, i + 1),
+        gas_partitions_array(sl.ghg_inverse_indices, Eigen::all),
+        airborne_emissions_array(sl.ghg_inverse_indices, i),
+        alpha_lifetime_array(sl.ghg_inverse_indices, i),
+        sl.baseline_concentration(sl.ghg_inverse_indices),
+        sl.baseline_emissions(sl.ghg_inverse_indices),
+        sl.concentration_per_emission(sl.ghg_inverse_indices),
+        sl.unperturbed_lifetime(Eigen::all, sl.ghg_inverse_indices),
+        sl.partition_fraction(Eigen::all, sl.ghg_inverse_indices), 1);
 
-  emissions(sl.ghg_inverse_indices, 0) = em_step.at(0);
-  gas_partitions_array(sl.ghg_inverse_indices, Eigen::all) =
-      em_step.at(1).transpose();
-  airborne_emissions(sl.ghg_inverse_indices, 1) = em_step.at(2);
+    emissions_array(sl.ghg_inverse_indices, i) = em_step.at(0);
+    gas_partitions_array(sl.ghg_inverse_indices, Eigen::all) =
+        em_step.at(1).transpose();
+    airborne_emissions_array(sl.ghg_inverse_indices, i + 1) = em_step.at(2);
 
-  cumulative_emissions(Eigen::all, 1) =
-      cumulative_emissions(Eigen::all, 0) + emissions(Eigen::all, 0) * 1;
+    cumulative_emissions_array(Eigen::all, i + 1) =
+        cumulative_emissions_array(Eigen::all, i) +
+        emissions_array(Eigen::all, i) * 1;
 
-  // Need to step/unstep concentration first
-  Eigen::VectorXd ghg_forcing_unoffset = meinshausen(
-      concentrations(Eigen::all, 1), sl.forcing_reference_concentration,
-      forcing_scale_array, sl.greenhouse_gas_radiative_efficiency,
-      sl.co2_indices, sl.ch4_indices, sl.n2o_indices, sl.other_gh_indices);
+    // Need to step/unstep concentration first
+    Eigen::VectorXd ghg_forcing_unoffset =
+        meinshausen(concentrations_array(Eigen::all, i + 1),
+                    sl.forcing_reference_concentration, forcing_scale_array,
+                    sl.greenhouse_gas_radiative_efficiency, sl.co2_indices,
+                    sl.ch4_indices, sl.n2o_indices, sl.other_gh_indices);
 
-  forcings(sl.ghg_indices, 1) =
-      (ghg_forcing_unoffset - ghg_forcing_offset)(sl.ghg_indices);
+    forcings_array(sl.ghg_indices, i + 1) =
+        (ghg_forcing_unoffset - ghg_forcing_offset)(sl.ghg_indices);
 
-  forcings(sl.ari_indices, 1) = calculate_erafi_forcing(
-      emissions(Eigen::all, 0), concentrations(Eigen::all, 1),
-      sl.baseline_emissions, sl.baseline_concentration, forcing_scale_array,
-      sl.erfari_radiative_efficiency,
-      sl.aerosol_chemistry_from_emissions_indices,
-      sl.aerosol_chemistry_from_concentration_indices);
+    forcings_array(sl.ari_indices, i + 1) = calculate_erafi_forcing(
+        emissions_array(Eigen::all, i), concentrations_array(Eigen::all, i + 1),
+        sl.baseline_emissions, sl.baseline_concentration, forcing_scale_array,
+        sl.erfari_radiative_efficiency,
+        sl.aerosol_chemistry_from_emissions_indices,
+        sl.aerosol_chemistry_from_concentration_indices);
 
-  forcings(sl.aci_indices, 1) = calculate_eraci_forcing(
-      emissions(Eigen::all, 0), concentrations(Eigen::all, 1),
-      sl.baseline_emissions, sl.baseline_concentration, forcing_scale_array,
-      sl.aci_scale, sl.aci_shape, sl.aerosol_chemistry_from_emissions_indices,
-      sl.aerosol_chemistry_from_concentration_indices);
+    forcings_array(sl.aci_indices, i + 1) = calculate_eraci_forcing(
+        emissions_array(Eigen::all, i), concentrations_array(Eigen::all, i + 1),
+        sl.baseline_emissions, sl.baseline_concentration, forcing_scale_array,
+        sl.aci_scale, sl.aci_shape, sl.aerosol_chemistry_from_emissions_indices,
+        sl.aerosol_chemistry_from_concentration_indices);
 
-  Eigen::VectorXd forcing_feedback =
-      Eigen::VectorXd::Ones(forcings.rows()) * cummins_state_array(0, 1);
-  forcings(Eigen::all, 1) =
-      forcings(Eigen::all, 1).array() +
-      (forcing_feedback.array() * sl.forcing_temperature_feedback.array());
+    Eigen::VectorXd forcing_feedback =
+        Eigen::VectorXd::Ones(forcings_array.rows()) *
+        cummins_state_array(1, i);
+    forcings_array(Eigen::all, i + 1) =
+        forcings_array(Eigen::all, i + 1).array() +
+        (forcing_feedback.array() * sl.forcing_temperature_feedback.array());
 
-  forcing_sum_array(1) =
-      (forcings(Eigen::all, 1).array() * sl.forcing_efficacy.array())
-          .array()
-          .sum();
+    forcing_sum_array(i + 1) = forcings_array(Eigen::all, i + 1).array().sum();
 
-  Eigen::VectorXd out = step_temperature(
-      cummins_state_array(Eigen::all, 0),
-      eb_matrix_d,
-      forcing_vector_d,
-      forcing_sum_array(1)
-  );
+    forcing_efficacy_sum_array(i + 1) =
+        (forcings_array(Eigen::all, i + 1).array() *
+         sl.forcing_efficacy.array())
+            .array()
+            .sum();
 
-  DEBUG(out);
+    cummins_state_array(Eigen::all, i + 1) =
+        step_temperature(cummins_state_array(Eigen::all, i), eb_matrix_d,
+                         forcing_vector_d, forcing_efficacy_sum_array(i + 1));
+  }
 
-  return Eigen::MatrixXd::Zero(1, 1);
+  Eigen::MatrixXd cummins_state_array_t = cummins_state_array.transpose();
+
+  Eigen::MatrixXd out_mat =
+      Eigen::MatrixXd(emissions_array.rows() + concentrations_array.rows() +
+                          forcings_array.rows() + cummins_state_array.rows() +
+                          airborne_emissions_array.rows(),
+                      timeseries_length);
+
+  out_mat << emissions_array, concentrations_array, forcings_array,
+      cummins_state_array, airborne_emissions_array;
+
+  // consistency with other demo models - time in rows
+  return out_mat.transpose();
 }
 Eigen::MatrixXd dynamic_weather_model::eval_generative(
     const Eigen::VectorXd& parameters,
@@ -216,7 +236,7 @@ Eigen::MatrixXd dynamic_weather_model::eval_generative(
   Eigen::MatrixXd output =
       eval_generative(parameters, parameter_locations, timeseries_length);
 
-  return Eigen::MatrixXd::Zero(1, 1);
+  return output(Eigen::all, select_response_vars);
 }
 
 Eigen::VectorXd dynamic_weather_model::meinshausen(
@@ -476,15 +496,8 @@ Eigen::VectorXd dynamic_weather_model::calculate_eraci_forcing(
 Eigen::VectorXd dynamic_weather_model::step_temperature(
     const Eigen::VectorXd& state_old, const Eigen::MatrixXd& eb_matrix_d,
     const Eigen::VectorXd& forcing_vector_d, const double& forcing) {
-
-
-  DEBUG(state_old);
-  DEBUG(eb_matrix_d);
-  DEBUG(forcing_vector_d);
-  DEBUG(forcing);
-
-  Eigen::VectorXd state_new = (eb_matrix_d * state_old).array() +
-                              (forcing_vector_d.array() * forcing);
+  Eigen::VectorXd state_new =
+      (eb_matrix_d * state_old).array() + (forcing_vector_d.array() * forcing);
   return state_new;
 }
 
