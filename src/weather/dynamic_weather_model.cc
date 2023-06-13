@@ -29,6 +29,7 @@
 
 #define PL parameter_locations
 #define ZERO(a, b) Eigen::MatrixXd::Zero(a, b)
+#define DEBUG(x) std::cout << #x << "= " << '\n' << x << std::endl;
 /**
  * Observed outcomes for the weather problem.
  */
@@ -79,6 +80,8 @@ Eigen::MatrixXd dynamic_weather_model::eval_generative(
   Eigen::MatrixXd airborne_emissions_array = this->airborne_emissions;
   Eigen::MatrixXd cumulative_emissions_array = this->cumulative_emissions;
   species_struct sl = this->species_list;
+
+  emissions_array(0, Eigen::seq(250, Eigen::last)) = parameters(Eigen::seq(11, Eigen::last)).transpose(); 
 
   Eigen::MatrixXd eb_matrix = calculate_eb_matrix(
       pl.ocean_heat_transfer.size(), parameters(pl.deep_ocean_efficacy).value(),
@@ -182,19 +185,25 @@ Eigen::MatrixXd dynamic_weather_model::eval_generative(
     forcings_array(sl.ghg_indices, i + 1) =
         (ghg_forcing_unoffset - ghg_forcing_offset)(sl.ghg_indices);
 
-    forcings_array(sl.ari_indices, i + 1) = calculate_erafi_forcing(
-        emissions_array(Eigen::all, i), concentrations_array(Eigen::all, i + 1),
-        sl.baseline_emissions, sl.baseline_concentration, forcing_scale_array,
-        sl.erfari_radiative_efficiency,
-        sl.aerosol_chemistry_from_emissions_indices,
-        sl.aerosol_chemistry_from_concentration_indices);
-
-    forcings_array(sl.aci_indices, i + 1) = calculate_eraci_forcing(
-        emissions_array(Eigen::all, i), concentrations_array(Eigen::all, i + 1),
-        sl.baseline_emissions, sl.baseline_concentration, forcing_scale_array,
-        sl.aci_scale, sl.aci_shape, sl.aerosol_chemistry_from_emissions_indices,
-        sl.aerosol_chemistry_from_concentration_indices);
-
+    // if sl.ari_indices is not empty
+    if (sl.ari_indices.size()) {
+      forcings_array(sl.ari_indices, i + 1) = calculate_erafi_forcing(
+          emissions_array(Eigen::all, i),
+          concentrations_array(Eigen::all, i + 1), sl.baseline_emissions,
+          sl.baseline_concentration, forcing_scale_array,
+          sl.erfari_radiative_efficiency,
+          sl.aerosol_chemistry_from_emissions_indices,
+          sl.aerosol_chemistry_from_concentration_indices);
+    }
+    // if sl.ari_indices is not empty
+    if (sl.aci_indices.size()) {
+      forcings_array(sl.aci_indices, i + 1) = calculate_eraci_forcing(
+          emissions_array(Eigen::all, i),
+          concentrations_array(Eigen::all, i + 1), sl.baseline_emissions,
+          sl.baseline_concentration, forcing_scale_array, sl.aci_scale,
+          sl.aci_shape, sl.aerosol_chemistry_from_emissions_indices,
+          sl.aerosol_chemistry_from_concentration_indices);
+    }
     Eigen::VectorXd forcing_feedback =
         Eigen::VectorXd::Ones(forcings_array.rows()) *
         cummins_state_array(1, i);
@@ -225,7 +234,8 @@ Eigen::MatrixXd dynamic_weather_model::eval_generative(
 
   out_mat << emissions_array, concentrations_array, forcings_array,
       cummins_state_array, airborne_emissions_array;
-
+  out_mat =
+      out_mat.unaryExpr([](double x) { return (std::isnan(x)) ? 0.0 : x; });
   // consistency with other demo models - time in rows
   return out_mat.transpose();
 }

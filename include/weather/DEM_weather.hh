@@ -14,9 +14,15 @@
 #include "Eigen/Dense"
 #include "parameter_location_weather.hh"
 #include "species_struct.hh"
+#include "dynamic_weather_model.hh"
+#include <random>
 #pragma once
 
 int run_weather_test();
+
+Eigen::MatrixXd random_generative(dynamic_weather_model& model,
+                                  Eigen::VectorXd& mean, Eigen::MatrixXd& var,
+                                  int& sz, std::mt19937& gen);
 
 std::vector<Eigen::MatrixXd> simple_ecf(const species_struct& species,
                            const std::string& scenario, const int& start_date,
@@ -25,8 +31,8 @@ species_struct simple_species_struct(const std::vector<std::string>& species_nam
 
 species_struct simple_species_struct();
 parameter_location_weather default_parameter_locations();
-Eigen::VectorXd true_prior_expectations();
-Eigen::VectorXd default_prior_expectations();
-Eigen::MatrixXd default_prior_covariances();
+Eigen::VectorXd true_prior_expectations(Eigen::VectorXd em);
+Eigen::VectorXd default_prior_expectations(Eigen::VectorXd em);
+Eigen::MatrixXd default_prior_covariances(int sz);
 Eigen::VectorXd default_hyper_expectations();
 Eigen::MatrixXd default_hyper_covariances();

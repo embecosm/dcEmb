@@ -22,6 +22,8 @@
  */
 class dynamic_model {
  public:
+
+  double converge_crit = 1e-1;
   /**
    * @brief Maximum number of EM steps attempted in inversion
    */

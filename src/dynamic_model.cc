@@ -214,7 +214,7 @@ void dynamic_model::invert_model() {
 
     std::cout << str << "F: " << current_free_energy - initial_free_energy
               << ' ' << "dF predicted: " << dF << ' ';
-    if (dF < 1e-1) {
+    if (dF < this->converge_crit) {
       num_success += 1;
       if (num_success == criterion) {
         auto end = std::chrono::high_resolution_clock::now();
