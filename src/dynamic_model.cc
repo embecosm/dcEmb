@@ -30,6 +30,11 @@
   }
 
 void dynamic_model::invert_model() {
+  const static Eigen::IOFormat CSVFormat(Eigen::FullPrecision,
+                                         Eigen::DontAlignCols, ",", "\n");
+  std::ofstream param_e_file("param_expecations.csv");
+  std::ofstream param_c_file("param_covariances.csv");
+  this->performed_it = 0;
   Eigen::MatrixXd response_vars_fs = this->get_observed_outcomes();
   int num_response_total = this->num_response_vars * this->num_samples;
   if (!num_response_vars) {
@@ -83,6 +88,7 @@ void dynamic_model::invert_model() {
   Eigen::VectorXd dFdp;
   Eigen::MatrixXd dFdpp;
   for (int i = 0; i < this->max_invert_it; i++) {
+    this->performed_it++;
     auto start = std::chrono::high_resolution_clock::now();
 
     // Runtime polymorphism - we have to use this->forward model to make
@@ -210,7 +216,15 @@ void dynamic_model::invert_model() {
     conditional_p_e =
         prior_p_e +
         singular_vec * p_estimate(Eigen::seq(0, num_parameters_eff - 1));
+
+    Eigen::MatrixXd conditional_p_c =
+        singular_vec * conditional_p_cov * singular_vec.transpose();
+
     double dF = dFdp.transpose() * dp;
+
+    param_e_file << conditional_p_e.transpose().format(CSVFormat) << '\n';
+
+    param_c_file << conditional_p_c.format(CSVFormat) << '\n';
 
     std::cout << str << "F: " << current_free_energy - initial_free_energy
               << ' ' << "dF predicted: " << dF << ' ';
@@ -229,6 +243,7 @@ void dynamic_model::invert_model() {
       num_success = 0;
     }
   }
+
   this->conditional_parameter_expectations =
       prior_p_e +
       singular_vec * p_estimate(Eigen::seq(0, num_parameters_eff - 1));
@@ -236,6 +251,17 @@ void dynamic_model::invert_model() {
       singular_vec * current_p_con_cov_estimate * singular_vec.transpose();
   this->conditional_hyper_expectations = current_h_estimate;
   this->free_energy = current_free_energy;
+
+  // param_e_file << conditional_parameter_expectations.transpose().format(
+  //                     CSVFormat)
+  //              << '\n';
+  // param_c_file << conditional_parameter_expectations.transpose().format(
+  //                     CSVFormat)
+  //              << '\n';
+
+  param_e_file.close();
+  param_c_file.close();
+
   return;
 }
 

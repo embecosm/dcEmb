@@ -31,6 +31,7 @@ class dynamic_model {
   /**
    * @brief Vector of posterior parameter expectations
    */
+  int performed_it = 0;
   Eigen::VectorXd conditional_parameter_expectations;
   /**
    * @brief Matrix of posterior parameter covariances

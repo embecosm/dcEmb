@@ -20,21 +20,23 @@ import pandas as pd
 fig = plt.figure()
 ax = fig.add_subplot()
 
-def update(num, ax, data_true, data_deriv, data_org, data_org_r, data_deriv_r, N, start, end,
+def update(num, ax, data_true, data_deriv, data_org, data_org_r, df_deriv_r_chunks, N, start, end,
     line1, line2, line3, line_list_org, line_list_pos):
     ax.set_title(num)
-    x_vals = list(range(0, num+1))
-
+    pos_s = (num+1) * N
+    pos_e = (num+2) * N
+    x_vals = np.array(list(range(0, N)))
+    
     i = 0
-    for (line_org, line_pos) in zip(line_list_org, line_list_pos):
-        idx = i*N
-        line_org.set_data(np.full_like(data_org_r[start:end, idx:idx+num+1], x_vals), data_org_r[start:end, idx:idx+num+1])
-        line_pos.set_data(np.full_like(data_deriv_r[start:end, idx:idx+num+1], x_vals), data_deriv_r[start:end, idx:idx+num+1])
+    data_deriv_r = df_deriv_r_chunks.get_chunk().values.T
+    for line_pos in line_list_pos:
+  
+        line_pos.set_data(x_vals, data_deriv_r[start, ((i*N)):((i+1)*N)])
         i = i + 1
 
-    line1.set_data(np.full_like(data_true[start:end, 0:num+1], x_vals), data_true[start:end, 0:num+1])
-    line2.set_data(np.full_like(data_deriv[start:end, 0:num+1], x_vals), data_deriv[start:end, 0:num+1])
-    line3.set_data(np.full_like(data_org[start:end, 0:num+1], x_vals), data_org[start:end, 0:num+1])
+    # line1.set_data(x_vals, data_true[start, 0:N])
+    line2.set_data(x_vals, data_deriv[start, pos_s:pos_e])
+    # line3.set_data(x_vals, data_org[start, 0:N])
 
 
     # ax.collections.clear()
@@ -48,11 +50,14 @@ df_org=pd.read_csv('weather/prior_generative.csv', sep=',',header=None)
 df_org_c=pd.read_csv('weather/prior_generative_var.csv', sep=',',header=None)
 df_deriv_c=pd.read_csv('weather/pos_generative_var.csv', sep=',',header=None)
 df_org_r=pd.read_csv('weather/prior_generative_rand.csv', sep=',',header=None)
-df_deriv_r=pd.read_csv('weather/pos_generative_rand.csv', sep=',',header=None)
 N = (df_true.shape)[0]
+iter = (df_deriv.shape)[0]//N
 rand_N = (df_org_r.shape)[0]//N
 
-rand_N = 1000
+df_deriv_r_chunks = pd.read_csv('weather/pos_generative_rand.csv', sep=',',header=None, chunksize=(N*rand_N))
+
+
+
 
 start = 16
 end = 17
@@ -63,20 +68,27 @@ data_org = df_org.values.T
 data_org_c = df_org_c.values.T
 data_deriv_c = df_deriv_c.values.T
 data_org_r = df_org_r.values.T
-data_deriv_r = df_deriv_r.values.T
 
+x_vals = np.array(list(range(0, N)))
+
+print(N)
+print(iter)
+print(rand_N)
 
 line_list_org = []
 line_list_pos = []
+# data_deriv_r = df_deriv_r_chunks.get_chunk().values.T
 for i in range(rand_N):
-    line_org, = ax.plot(np.zeros_like(data_true[start:end, 0:1]), data_org_r[start:end, (i*N):(i*N+1)], '-', color='#377fef', label='prior', alpha=0.02)
+    line_org, = ax.plot(x_vals, data_org_r[start, (i*N):(i+1)*N], '-', color='#377fef', label='prior', alpha=0.025)
     line_list_org.append(line_org)
-    line_pos, = ax.plot(np.zeros_like(data_true[start:end, 0:1]), data_deriv_r[start:end, (i*N):(i*N+1)], '-', color='#36ba3f', label='prior', alpha=0.02)
+    line_pos, = ax.plot(x_vals,data_org_r[start, (i*N):(i+1)*N], '-', color='#36ba3f', label='prior', alpha=0.025)
     line_list_pos.append(line_pos)
 
-line1, = ax.plot(np.zeros_like(data_true[start:end, 0:1]), data_true[start:end, 0:1], '-', color='#b71c1c', label='true')
-line2, = ax.plot(np.zeros_like(data_true[start:end, 0:1]), data_deriv[start:end, 0:1], '-', color='#1b5e20', label='posterior')
-line3, = ax.plot(np.zeros_like(data_true[start:end, 0:1]), data_org[start:end, 0:1], '-', color='#0d47a1', label='prior')
+
+
+line1, = ax.plot(x_vals, data_true[start, 0:N], '-', color='#b71c1c', label='true')
+line2, = ax.plot(x_vals, data_deriv[start, 0:N], '-', color='#1b5e20', label='posterior')
+line3, = ax.plot(x_vals, data_org[start, 0:N], '-', color='#0d47a1', label='prior')
 
 
 # fill2, = ax.fill_between(0, data_deriv[25, 0:1] - data_deriv_c[25, 0:1], data_deriv[25, 0:1] + data_deriv_c[25, 0:1], color='#1b5e20', alpha=0.25),
@@ -97,8 +109,8 @@ line3, = ax.plot(np.zeros_like(data_true[start:end, 0:1]), data_org[start:end, 0
 # ma = max([data_true[[col],].max(), data_deriv[[col],].max(),
 # data_org[[col],].max()])
 
-ma = max([data_deriv_r[start:end,].max(), data_org_r[start:end,].max()])
-mi = min([data_deriv_r[start:end,].min(), data_org_r[start:end,].min()])
+ma = max([data_true[start:end,].max(), data_true[start:end,].max()])
+mi = min([data_true[start:end,].min(), data_true[start:end,].min()])
 
 
 # Setting the axes properties
@@ -110,9 +122,12 @@ ax.set_ylabel('Y')
 
 # ax.legend()
 
-ani = animation.FuncAnimation(fig, update, N, fargs=(ax, 
-    data_true, data_deriv, data_org, data_org_r, data_deriv_r, N, start, end, 
+ani = animation.FuncAnimation(fig, update, iter-1, fargs=(ax, 
+    data_true, data_deriv, data_org, data_org_r, df_deriv_r_chunks, N, start, end, 
     line1, line2, line3, line_list_org, line_list_pos), repeat=False)
-plt.show()
+# plt.show()
+
+# df_deriv_r_chunks = pd.read_csv('weather/pos_generative_rand.csv', sep=',',header=None, chunksize=(N*rand_N))
+
 ani.save('./weather.mp4', fps=10, dpi=300)
 # fig.savefig('weather.png')

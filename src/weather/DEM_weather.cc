@@ -35,7 +35,7 @@ int run_weather_test() {
   int sz = end_date - start_date + 1;
   model.num_samples = sz;
 
-  model.max_invert_it = 1024;
+  model.max_invert_it = 512;
 
   model.num_response_vars = 5;
   model.select_response_vars = (Eigen::VectorXi(5) << 5, 6, 7, 8, 9).finished();
@@ -57,15 +57,14 @@ int run_weather_test() {
   model.emissions.row(4) = model.emissions.row(4) / 1000;
   model.emissions.row(2) = model.emissions.row(0) + model.emissions.row(1);
 
-  model.prior_parameter_expectations =
-      default_prior_expectations(ecf_prior.at(0)(0, Eigen::seq(250, Eigen::last)));
-  model.prior_parameter_covariances = default_prior_covariances(sz-250);
+  model.prior_parameter_expectations = default_prior_expectations(
+      ecf_prior.at(0)(0, Eigen::seq(250, Eigen::last)));
+  model.prior_parameter_covariances = default_prior_covariances(sz - 250);
   model.prior_hyper_expectations = default_hyper_expectations();
   model.prior_hyper_covariances = default_hyper_covariances();
   model.parameter_locations = default_parameter_locations();
 
   // Scale units of emissions
-
 
   model.concentrations = ecf.at(1);
   // model.forcings = ecf.at(2);
@@ -94,97 +93,110 @@ int run_weather_test() {
       Eigen::MatrixXd::Zero(model.species_list.name.size(), sz);
 
   Eigen::MatrixXd true_out = model.eval_generative(
-      true_prior_expectations(model.emissions(0, Eigen::seq(250, Eigen::last))), default_parameter_locations(), sz);
+      true_prior_expectations(model.emissions(0, Eigen::seq(250, Eigen::last))),
+      default_parameter_locations(), sz);
 
   model.response_vars = true_out(Eigen::all, model.select_response_vars);
 
   model.invert_model();
 
-  Eigen::MatrixXd prior_e_out = model.eval_generative(
-      model.prior_parameter_expectations,
-      default_parameter_locations(), sz);
+  int n = 1000;
 
-  Eigen::MatrixXd posterior_e_out =
+  Eigen::MatrixXd prior_e_out = model.eval_generative(
+      model.prior_parameter_expectations, default_parameter_locations(), sz);
+
+  Eigen::MatrixXd posterior_final_out =
       model.eval_generative(model.conditional_parameter_expectations,
                             default_parameter_locations(), sz);
 
   Eigen::MatrixXd prior_c_out_m = model.eval_generative(
-      model.prior_parameter_expectations,
-      default_parameter_locations(), sz);
-  Eigen::MatrixXd posterior_c_out_m =
-      model.eval_generative(model.conditional_parameter_expectations,
-                            default_parameter_locations(), sz);
+      model.prior_parameter_expectations, default_parameter_locations(), sz);
 
-  Eigen::MatrixXd prior_c_out_v =
-      Eigen::MatrixXd::Zero(prior_c_out_m.rows(), prior_c_out_m.cols());
-  Eigen::MatrixXd posterior_c_out_v =
-      Eigen::MatrixXd::Zero(posterior_c_out_m.rows(), posterior_c_out_m.cols());
-
-  int n = 1000;
   Eigen::MatrixXd prior_rand_out =
       Eigen::MatrixXd(prior_e_out.rows() * n, prior_e_out.cols());
-  Eigen::MatrixXd posterior_rand_out =
-      Eigen::MatrixXd(posterior_e_out.rows() * n, posterior_e_out.cols());
 
   std::default_random_engine rd;
   std::mt19937 gen(rd());
 
-  prior_rand_out(Eigen::seqN(0, sz), Eigen::all) =
-      random_generative(model, model.prior_parameter_expectations,
-                        model.prior_parameter_covariances, sz, gen);
-  posterior_rand_out(Eigen::seqN(0, sz), Eigen::all) =
-      random_generative(model, model.conditional_parameter_expectations,
-                        model.conditional_parameter_covariances, sz, gen);
-  for (int i = 1; i < n; i++) {
-    // std::cout << "simulating variance: " << i << '\n';
-
+  for (int i = 0; i < n; i++) {
     Eigen::MatrixXd prior_tmp =
         random_generative(model, model.prior_parameter_expectations,
                           model.prior_parameter_covariances, sz, gen);
     prior_rand_out(Eigen::seqN(i * sz, sz), Eigen::all) = prior_tmp;
-    Eigen::MatrixXd prior_c_out_m_old = prior_c_out_m;
-    prior_c_out_m = prior_c_out_m_old.array() +
-                    ((prior_tmp - prior_c_out_m_old).array() / i);
-    prior_c_out_v =
-        (prior_c_out_v.array() + (prior_tmp - prior_c_out_m_old).array() *
-                                     (prior_tmp - prior_c_out_m).array())
-            .eval();
-
-    Eigen::MatrixXd posterior_tmp =
-        random_generative(model, model.conditional_parameter_expectations,
-                          model.conditional_parameter_covariances, sz, gen);
-
-    posterior_rand_out(Eigen::seqN(i * sz, sz), Eigen::all) = posterior_tmp;
-    Eigen::MatrixXd posterior_c_out_m_old = posterior_c_out_m;
-    posterior_c_out_m = posterior_c_out_m_old.array() +
-                        ((posterior_tmp - posterior_c_out_m_old).array() / i);
-    posterior_c_out_v = (posterior_c_out_v.array() +
-                         (posterior_tmp - posterior_c_out_m_old).array() *
-                             (posterior_tmp - posterior_c_out_m).array())
-                            .eval();
   }
 
-  Eigen::MatrixXd prior_c_out = prior_c_out_v.array() / n;
-  Eigen::MatrixXd posterior_c_out = posterior_c_out_v.array() / n;
+  std::ifstream param_expectations_file;
+  param_expectations_file.open("param_expecations.csv");
+  std::string param_expectations_line;
+  std::ifstream param_covariances_file;
+  param_covariances_file.open("param_covariances.csv");
+  std::string param_covariances_line;
 
-  // for (int i = i; i < n; i++) {
+  Eigen::MatrixXd posterior_e_out =
+      Eigen::MatrixXd(sz * model.performed_it, posterior_final_out.cols());
 
-  // }
+  Eigen::MatrixXd posterior_rand_out =
+      Eigen::MatrixXd(sz * n * model.performed_it, posterior_final_out.cols());
 
-  utility::print_matrix("emissions", model.emissions);
+  int i = 0;
+  while (std::getline(param_expectations_file, param_expectations_line)) {
+    std::vector<double> values_e;
+    std::stringstream lineStream_e(param_expectations_line);
+    std::string cell_e;
+    while (std::getline(lineStream_e, cell_e, ',')) {
+      values_e.push_back(std::stod(cell_e));
+    }
+
+    std::vector<double> values_c;
+    for (int k = 0; k < values_e.size(); k++) {
+      std::getline(param_covariances_file, param_covariances_line);
+
+      std::stringstream lineStream_c(param_covariances_line);
+      std::string cell_c;
+      while (std::getline(lineStream_c, cell_c, ',')) {
+        values_c.push_back(std::stod(cell_c));
+      }
+    }
+
+    Eigen::VectorXd param_expectations =
+        Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(values_e.data(),
+                                                      values_e.size());
+
+    Eigen::MatrixXd param_covariances =
+        Eigen::Map<Eigen::MatrixXd, Eigen::Unaligned>(
+            values_c.data(), values_e.size(), values_e.size());
+
+    // Eigen::MatrixXd test1 = posterior_e_out(Eigen::seqN(i * sz, sz),
+    // Eigen::all);
+    // Eigen::MatrixXd test2 = model.eval_generative(param_expectations,
+    //                           default_parameter_locations(), sz);
+    // DEBUG(test1.rows());
+    // DEBUG(test1.cols());
+    // DEBUG(test2.rows());
+    // DEBUG(test2.cols());
+    posterior_e_out(Eigen::seqN(i * sz, sz), Eigen::all) =
+        model.eval_generative(param_expectations, default_parameter_locations(),
+                              sz);
+    for (int j = 0; j < n; j++) {
+      posterior_rand_out(Eigen::seqN(i * sz * n + (j * sz), sz), Eigen::all) =
+          random_generative(model, param_expectations, param_covariances, sz,
+                            gen);
+    }
+    DEBUG(i);
+    i++;
+  }
+
+  param_expectations_file.close();
+  param_covariances_file.close();
 
   utility::print_matrix("../visualisation/weather/true_generative.csv",
                         true_out);
   utility::print_matrix("../visualisation/weather/prior_generative.csv",
                         prior_e_out);
-  utility::print_matrix("../visualisation/weather/prior_generative_var.csv",
-                        prior_c_out);
   utility::print_matrix("../visualisation/weather/prior_generative_rand.csv",
                         prior_rand_out);
   utility::print_matrix("../visualisation/weather/pos_generative.csv",
                         posterior_e_out);
-  utility::print_matrix("../visualisation/weather/pos_generative_var.csv",
-                        posterior_c_out);
   utility::print_matrix("../visualisation/weather/pos_generative_rand.csv",
                         posterior_rand_out);
   // std::cout << "temperature" << true_out(25, Eigen::all) << '\n';
@@ -200,10 +212,9 @@ Eigen::MatrixXd random_generative(dynamic_weather_model& model,
       Eigen::VectorXd::Zero(mean.size()).unaryExpr([&](double dummy) {
         return dis(gen);
       });
-
-  rand_param_prior =
-      ((rand_param_prior.array() * var.diagonal().array()) + mean.array())
-          .eval();
+  Eigen::LLT<Eigen::MatrixXd> lltOfA(var);
+  Eigen::MatrixXd L = lltOfA.matrixL();
+  rand_param_prior = ((L * rand_param_prior).array() + mean.array()).eval();
 
   return model.eval_generative(rand_param_prior, default_parameter_locations(),
                                sz);
@@ -266,8 +277,8 @@ std::vector<Eigen::MatrixXd> simple_ecf(const species_struct& species,
         continue;
       }
     }
-    // There's probably a way to do this elegantly with Eigen::Map to reuse the
-    // memory
+    // There's probably a way to do this elegantly with Eigen::Map to reuse
+    // the memory
 
     for (int i = 0; i < emissions_split.size(); i++) {
       if (emissions_split.at(i).empty()) {
@@ -328,8 +339,8 @@ std::vector<Eigen::MatrixXd> simple_ecf(const species_struct& species,
         continue;
       }
     }
-    // There's probably a way to do this elegantly with Eigen::Map in a way that
-    // reuses the memory
+    // There's probably a way to do this elegantly with Eigen::Map in a way
+    // that reuses the memory
     if (species.input_mode.at(name_idx) == "concentrations") {
       for (int i = 0; i < (end_date - start_date + 1); i++) {
         int pos = start_date - 1700 + 7 + i;
@@ -373,8 +384,8 @@ std::vector<Eigen::MatrixXd> simple_ecf(const species_struct& species,
         continue;
       }
     }
-    // There's probably a way to do this elegantly with Eigen::Map in a way that
-    // reuses the memory
+    // There's probably a way to do this elegantly with Eigen::Map in a way
+    // that reuses the memory
     if (species.input_mode.at(name_idx) == "forcings") {
       for (int i = 0; i < (end_date - start_date + 1); i++) {
         int pos = start_date - 1750 + 7 + i;
@@ -450,7 +461,8 @@ species_struct simple_species_struct(
  */
 Eigen::VectorXd true_prior_expectations(Eigen::VectorXd em) {
   Eigen::VectorXd default_prior_expectation = Eigen::VectorXd::Zero(11);
-  // default_prior_expectation << 0.6, 1.3, 1, 5, 15, 80, 1.29, 0.5, 0.5, 2, 8;
+  // default_prior_expectation << 0.6, 1.3, 1, 5, 15, 80, 1.29, 0.5, 0.5, 2,
+  // 8;
   default_prior_expectation << 1.876, 5.154, 0.6435, 2.632, 9.262, 52.93, 1.285,
       2.691, 0.4395, 28.24, 8;
 
@@ -485,8 +497,8 @@ parameter_location_weather default_parameter_locations() {
 Eigen::VectorXd default_prior_expectations(Eigen::VectorXd em) {
   Eigen::VectorXd default_prior_expectation = Eigen::VectorXd::Zero(11);
   double x = 0;
-  default_prior_expectation << 1.876, 5.154, 0.6435, 2.632,
-      9.262, 52.93, 1.285, 2.691, 0.4395, 28.24, 8;
+  default_prior_expectation << 1.876, 5.154, 0.6435, 2.632, 9.262, 52.93, 1.285,
+      2.691, 0.4395, 28.24, 8;
 
   Eigen::VectorXd out_vec = Eigen::VectorXd(em.size() + 11);
   out_vec << default_prior_expectation, em * x;
@@ -503,7 +515,8 @@ Eigen::MatrixXd default_prior_covariances(int sz) {
   double fixed = 1 / (double)2048;      // fixed priors
   Eigen::VectorXd default_prior_covariance = Eigen::VectorXd::Ones(sz + 11);
   default_prior_covariance = default_prior_covariance * informative;
-  // default_prior_covariance << flat, flat, flat, flat, flat, flat, flat, flat,
+  // default_prior_covariance << flat, flat, flat, flat, flat, flat, flat,
+  // flat,
   //     flat, flat, flat;
 
   Eigen::MatrixXd return_default_prior_covariance =
