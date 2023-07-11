@@ -17,7 +17,6 @@
 #include <functional>
 #include <iostream>
 #include <random>
-#include "species_struct.hh"
 
 #define SparseMD Eigen::SparseMatrix<double>
 #define SparseVD Eigen::SparseVector<double>
@@ -27,8 +26,6 @@ namespace utility {
 double logdet(const Eigen::MatrixXd& mat);
 Eigen::VectorXd dx(const Eigen::MatrixXd& dfdx, const Eigen::VectorXd& f,
                    const double& t_in);
-Eigen::MatrixXd diff(std::function<Eigen::VectorXd(Eigen::VectorXd)> func,
-                     Eigen::VectorXd& vars, Eigen::MatrixXd& transform);
 Eigen::VectorXd rungekutta(std::function<Eigen::VectorXd(Eigen::VectorXd)> func,
                            Eigen::VectorXd& vars, double& h);
 
@@ -220,11 +217,4 @@ double SparseProductTrace(const SparseMD& A, const SparseMD& B);
 void splitstr(std::vector<std::string>& vec, const std::string& str,
               const char& delim);
 
-species species_from_string(const std::string& string);
-species_struct species_from_file(const std::string& filename,
-                                 const std::vector<std::string>& names);
-species_struct species_from_file(const std::string& filename);
-void update_species_list_indicies(species_struct& species_struct);
-species_struct species_list_to_struct(const std::vector<species>& species_list);
-void calculate_concentration_per_emission(species_struct& species_struct);
 }  // namespace utility

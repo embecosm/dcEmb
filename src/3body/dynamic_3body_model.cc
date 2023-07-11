@@ -42,7 +42,7 @@ Eigen::VectorXd dynamic_3body_model::get_observed_outcomes() {
 /**
  * Return the wrapped forward model for the 3body problem
  */
-std::function<Eigen::VectorXd(Eigen::VectorXd)>
+std::function<Eigen::VectorXd(const Eigen::VectorXd&)>
 dynamic_3body_model::get_forward_model_function() {
   std::function<Eigen::VectorXd(Eigen::VectorXd)> forward_model = std::bind(
       &dynamic_3body_model::forward_model, this, std::placeholders::_1,

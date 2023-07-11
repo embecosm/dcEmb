@@ -28,7 +28,7 @@ class dynamic_3body_model : public dynamic_model {
   int num_bodies = 3;
   double G = 1;
   Eigen::VectorXd get_observed_outcomes();
-  std::function<Eigen::VectorXd(Eigen::VectorXd)> get_forward_model_function();
+  std::function<Eigen::VectorXd(const Eigen::VectorXd&)> get_forward_model_function();
   Eigen::VectorXd forward_model(
       const Eigen::VectorXd& parameters,
       const parameter_location_3body& parameter_locations,

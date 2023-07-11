@@ -1,10 +1,12 @@
 # dcEmb
-An open source implementation of the Dynamic Causal Modelling framework in C++
+An open source implementation of the Dynamic Causal Modelling library in C++
 by Embecosm. 
 
 # Minimum Requirements
 - Cmake
 - C++ 14 compatible compiler
+- OpenMP
+- Eigen >=3.4
 
 # Documentation
 This codebase is documented with Doxygen and Sphinx. Online versions of
@@ -17,6 +19,10 @@ To build sphinx documentation:
 
 # Getting Started
 See the online manual [here](https://embecosm.github.io/dcEmb_docs/).
+
+The codebase is briefly undergoing a substantial set of changes. These
+instructions may be out of date
+
 
 # Changelog
 A log of changes made to the code can be found in markdown format in the NEWS

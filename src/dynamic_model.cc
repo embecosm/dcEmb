@@ -30,10 +30,17 @@
   }
 
 void dynamic_model::invert_model() {
+
+  std::ofstream param_e_file;
+  std::ofstream param_c_file;
   const static Eigen::IOFormat CSVFormat(Eigen::FullPrecision,
-                                         Eigen::DontAlignCols, ",", "\n");
-  std::ofstream param_e_file("param_expecations.csv");
-  std::ofstream param_c_file("param_covariances.csv");
+                                           Eigen::DontAlignCols, ",", "\n");
+  if (this->intermediate_outputs_to_file) {
+
+    param_e_file.open(this->intermediate_expectations_filename);
+    param_c_file.open(this->intermediate_covariances_filename);
+  }
+
   this->performed_it = 0;
   Eigen::MatrixXd response_vars_fs = this->get_observed_outcomes();
   int num_response_total = this->num_response_vars * this->num_samples;
@@ -70,6 +77,7 @@ void dynamic_model::invert_model() {
 
   Eigen::VectorXd likel_p_e = Eigen::VectorXd::Zero(num_parameters_eff);
   Eigen::VectorXd conditional_p_e = prior_p_e;
+  Eigen::MatrixXd conditional_p_c;
   double ascent_rate = -4.0;
 
   Eigen::VectorXd h_estimate = prior_h_e;
@@ -82,11 +90,12 @@ void dynamic_model::invert_model() {
   double initial_free_energy = -INFINITY;
   int criterion = 4;
   int num_success = 0;
-  std::function<Eigen::VectorXd(Eigen::VectorXd)> forward_model_function =
+  std::function<Eigen::VectorXd(const Eigen::VectorXd&)> forward_model_function =
       this->get_forward_model_function();
 
   Eigen::VectorXd dFdp;
   Eigen::MatrixXd dFdpp;
+  
   for (int i = 0; i < this->max_invert_it; i++) {
     this->performed_it++;
     auto start = std::chrono::high_resolution_clock::now();
@@ -96,7 +105,7 @@ void dynamic_model::invert_model() {
     // inheriting classes
     Eigen::MatrixXd predicted_f = forward_model_function(conditional_p_e);
     Eigen::MatrixXd dfdp =
-        utility::diff(forward_model_function, conditional_p_e, singular_vec);
+        this->diff(forward_model_function, conditional_p_e, singular_vec);
     // Check for stability. Is the Infinity Norm in resonable bounds?
     double norm = dfdp.cwiseAbs().rowwise().sum().maxCoeff();
     bool revert = (norm > 1e32);
@@ -217,14 +226,13 @@ void dynamic_model::invert_model() {
         prior_p_e +
         singular_vec * p_estimate(Eigen::seq(0, num_parameters_eff - 1));
 
-    Eigen::MatrixXd conditional_p_c =
-        singular_vec * conditional_p_cov * singular_vec.transpose();
-
     double dF = dFdp.transpose() * dp;
-
-    param_e_file << conditional_p_e.transpose().format(CSVFormat) << '\n';
-
-    param_c_file << conditional_p_c.format(CSVFormat) << '\n';
+    conditional_p_c =
+        singular_vec * conditional_p_cov * singular_vec.transpose();
+    if (this->intermediate_outputs_to_file) {
+      param_e_file << conditional_p_e.transpose().format(CSVFormat) << '\n';
+      param_c_file << conditional_p_c.format(CSVFormat) << '\n';
+    }
 
     std::cout << str << "F: " << current_free_energy - initial_free_energy
               << ' ' << "dF predicted: " << dF << ' ';
@@ -252,15 +260,10 @@ void dynamic_model::invert_model() {
   this->conditional_hyper_expectations = current_h_estimate;
   this->free_energy = current_free_energy;
 
-  // param_e_file << conditional_parameter_expectations.transpose().format(
-  //                     CSVFormat)
-  //              << '\n';
-  // param_c_file << conditional_parameter_expectations.transpose().format(
-  //                     CSVFormat)
-  //              << '\n';
-
-  param_e_file.close();
-  param_c_file.close();
+  if (this->intermediate_outputs_to_file) {
+    param_e_file.close();
+    param_c_file.close();
+  }
 
   return;
 }
@@ -277,9 +280,9 @@ Eigen::VectorXd dynamic_model::get_observed_outcomes() {
 /*
  * Wrap the forward model function
  */
-std::function<Eigen::VectorXd(Eigen::VectorXd)>
+std::function<Eigen::VectorXd(const Eigen::VectorXd&)>
 dynamic_model::get_forward_model_function() {
-  std::function<Eigen::VectorXd(Eigen::VectorXd)> forward_model =
+  std::function<Eigen::VectorXd(const Eigen::VectorXd&)> forward_model =
       std::bind(&dynamic_model::forward_model, this, std::placeholders::_1);
   return forward_model;
 }
@@ -289,7 +292,7 @@ dynamic_model::get_forward_model_function() {
  * this function is reached, something is wrong and an error is thrown.
  */
 Eigen::VectorXd dynamic_model::forward_model(
-    const Eigen::VectorXd &parameters) {
+    const Eigen::VectorXd& parameters) {
   throw std::runtime_error("error: forward_model not specified");
   return Eigen::VectorXd::Zero(1);
 }

@@ -18,7 +18,7 @@
 #include <functional>
 #include <iostream>
 #include <unsupported/Eigen/KroneckerProduct>
-
+#include <dynamic_model.hh>
 #include <cstdlib>
 #include <ctime>
 
@@ -81,6 +81,7 @@ TEST(utility_test, logdet) {
 }
 
 TEST(utility_test, diff) {
+  dynamic_model model;
   std::function<Eigen::VectorXd(const Eigen::VectorXd&)> test1 =
       [](const Eigen::VectorXd& a) {
         return a.unaryExpr([](double x) { return exp(x); });
@@ -89,7 +90,7 @@ TEST(utility_test, diff) {
   Eigen::VectorXd vec1(2);
   vec1 << 1, 2;
   Eigen::MatrixXd mat1 = Eigen::MatrixXd::Identity(2, 2);
-  Eigen::MatrixXd out1 = utility::diff(test1, vec1, mat1);
+  Eigen::MatrixXd out1 = model.diff(test1, vec1, mat1);
   std::function<Eigen::VectorXd(const Eigen::VectorXd&)> test2 =
       [](const Eigen::VectorXd& a) {
         return a.unaryExpr([](double x) { return pow(x, 2); });
@@ -97,7 +98,7 @@ TEST(utility_test, diff) {
   Eigen::VectorXd vec2(2);
   vec2 << 1, 2;
   Eigen::MatrixXd mat2 = Eigen::MatrixXd::Identity(2, 2);
-  Eigen::MatrixXd out2 = utility::diff(test2, vec2, mat2);
+  Eigen::MatrixXd out2 = model.diff(test2, vec2, mat2);
   std::function<Eigen::VectorXd(const Eigen::VectorXd&)> test3 =
       [](const Eigen::VectorXd& a) {
         return a.unaryExpr([](double x) { return log(x); });
@@ -105,7 +106,7 @@ TEST(utility_test, diff) {
   Eigen::VectorXd vec3(2);
   vec3 << 1, 2;
   Eigen::MatrixXd mat3 = Eigen::MatrixXd::Identity(2, 2);
-  Eigen::MatrixXd out3 = utility::diff(test3, vec3, mat3);
+  Eigen::MatrixXd out3 = model.diff(test3, vec3, mat3);
   std::function<Eigen::VectorXd(const Eigen::VectorXd&)> test4 =
       [](const Eigen::VectorXd& a) {
         return a.unaryExpr([](double x) { return 1 / x; });
@@ -113,7 +114,7 @@ TEST(utility_test, diff) {
   Eigen::VectorXd vec4(2);
   vec4 << 1, 2;
   Eigen::MatrixXd mat4 = Eigen::MatrixXd::Identity(2, 2);
-  Eigen::MatrixXd out4 = utility::diff(test4, vec4, mat4);
+  Eigen::MatrixXd out4 = model.diff(test4, vec4, mat4);
   Eigen::MatrixXd res1(2, 2);
   res1 << 2.71873782042874, 0, 0, 7.3902956136159546;
   Eigen::MatrixXd res2(2, 2);
@@ -130,118 +131,6 @@ TEST(utility_test, diff) {
       EXPECT_DOUBLE_EQ(res4(i, j), out4(i, j));
     }
   }
-}
-
-TEST(utility_test, permute_matrix) {
-  Eigen::VectorXd vec0(2);
-  vec0 << 1, 2;
-  Eigen::VectorXd vec1(2);
-  vec1 << 3, 4;
-  Eigen::VectorXd vec2(3);
-  vec2 << 5, 6, 7;
-  Eigen::MatrixXd mat0 = kroneckerProduct(vec0, vec0.transpose());
-  Eigen::MatrixXd mat1 = kroneckerProduct(vec1, vec1.transpose());
-  Eigen::MatrixXd mat2 = kroneckerProduct(vec2, vec2.transpose());
-
-  Eigen::VectorXi new_order(3);
-  new_order << 0, 2, 1;
-  Eigen::VectorXi sizes(3);
-  sizes << 3, 2, 2;
-  Eigen::MatrixXd joint_density =
-      kroneckerProduct(mat2, kroneckerProduct(mat1, mat0));
-  Eigen::MatrixXd new_joint_density = utility::permute_kron_matrix(
-      joint_density.sparseView(), new_order, sizes);
-  Eigen::MatrixXd res(12, 12);
-  res << 225, 450, 300, 360, 720, 315, 600, 270, 540, 630, 420, 840, 450, 900,
-      600, 720, 1440, 630, 1200, 540, 1080, 1260, 840, 1680, 300, 600, 400, 480,
-      960, 420, 800, 360, 720, 840, 560, 1120, 360, 720, 480, 576, 1152, 504,
-      960, 432, 864, 1008, 672, 1344, 720, 1440, 960, 1152, 2304, 1008, 1920,
-      864, 1728, 2016, 1344, 2688, 315, 630, 420, 504, 1008, 441, 840, 378, 756,
-      882, 588, 1176, 600, 1200, 800, 960, 1920, 840, 1600, 720, 1440, 1680,
-      1120, 2240, 270, 540, 360, 432, 864, 378, 720, 324, 648, 756, 504, 1008,
-      540, 1080, 720, 864, 1728, 756, 1440, 648, 1296, 1512, 1008, 2016, 630,
-      1260, 840, 1008, 2016, 882, 1680, 756, 1512, 1764, 1176, 2352, 420, 840,
-      560, 672, 1344, 588, 1120, 504, 1008, 1176, 784, 1568, 840, 1680, 1120,
-      1344, 2688, 1176, 2240, 1008, 2016, 2352, 1568, 3136;
-  EXPECT_EQ(new_joint_density, res);
-}
-
-TEST(utility_test, calc_permuted_kron_identity_product) {
-  Eigen::VectorXd vec0(2);
-  vec0 << 1, 2;
-  Eigen::VectorXd vec1(2);
-  vec1 << 3, 4;
-  Eigen::VectorXd vec2(3);
-  vec2 << 5, 6, 7;
-  Eigen::MatrixXd mat0 = kroneckerProduct(vec0, vec0.transpose());
-  Eigen::MatrixXd mat1 = kroneckerProduct(vec1, vec1.transpose());
-  Eigen::MatrixXd mat2 = kroneckerProduct(vec2, vec2.transpose());
-
-  Eigen::VectorXi new_order(5);
-  new_order << 0, 2, 1, 3, 4;
-  Eigen::VectorXi sizes(5);
-  sizes << 3, 2, 2, 5, 4;
-  Eigen::MatrixXd joint_density =
-      kroneckerProduct(mat2, kroneckerProduct(mat1, mat0)).eval();
-  Eigen::MatrixXd new_joint_density =
-      kroneckerProduct(Eigen::MatrixXd::Identity(20, 20), joint_density);
-
-  Eigen::MatrixXd out1 = utility::permute_kron_matrix(
-      new_joint_density.sparseView(), new_order, sizes);
-  Eigen::MatrixXd out2 = utility::calc_permuted_kron_identity_product(
-      20, joint_density.sparseView(), new_order, sizes);
-  EXPECT_EQ(out1, out2);
-}
-
-TEST(utility_test, find_kron_position) {
-  Eigen::VectorXd vec0(4);
-  vec0 << 1, 2, 3, 4;
-  Eigen::VectorXd vec1(5);
-  vec1 << 5, 6, 7, 8, 9;
-  Eigen::VectorXd vec2(3);
-  vec2 << 10, 11, 12;
-  Eigen::VectorXd ensemble_density =
-      kroneckerProduct(vec2, kroneckerProduct(vec1, vec0));
-  Eigen::VectorXi vec3(3);
-  vec3 << 0, 1, 2;
-  Eigen::VectorXi vec4(3);
-  vec4 << 0, 3, 2;
-  Eigen::VectorXi vec5(3);
-  vec5 << 3, 4, 0;
-  Eigen::VectorXi vec6(3);
-  vec6 << 3, 0, 2;
-  Eigen::VectorXi sizes(3);
-  sizes << 4, 5, 3;
-  EXPECT_EQ(44, utility::find_kron_position(vec3, sizes));
-  EXPECT_EQ(52, utility::find_kron_position(vec4, sizes));
-  EXPECT_EQ(19, utility::find_kron_position(vec5, sizes));
-  EXPECT_EQ(43, utility::find_kron_position(vec6, sizes));
-  EXPECT_EQ(72, ensemble_density(utility::find_kron_position(vec3, sizes)));
-  EXPECT_EQ(96, ensemble_density(utility::find_kron_position(vec4, sizes)));
-  EXPECT_EQ(360, ensemble_density(utility::find_kron_position(vec5, sizes)));
-  EXPECT_EQ(240, ensemble_density(utility::find_kron_position(vec6, sizes)));
-}
-
-TEST(utility_test, sigma) {
-  EXPECT_DOUBLE_EQ(utility::sigma(0.5, 1, 4), 0.8807970779778823);
-  EXPECT_DOUBLE_EQ(utility::sigma(0, 1, 4), 0.9820137900379085);
-  EXPECT_DOUBLE_EQ(utility::sigma(1, 1, 4), 0.5);
-  EXPECT_DOUBLE_EQ(utility::sigma(0.5, 0.1, 4), 1.12535162055095e-07);
-  EXPECT_DOUBLE_EQ(utility::sigma(0, 0.5, 4), 0.9820137900379085);
-  EXPECT_DOUBLE_EQ(utility::sigma(1, 10, 4), 0.973403006423134);
-  EXPECT_DOUBLE_EQ(utility::sigma(0.5, 1, 2), 0.7310585786300049);
-  EXPECT_DOUBLE_EQ(utility::sigma(0, 1, 8), 0.9996646498695336);
-  EXPECT_DOUBLE_EQ(utility::sigma(1, 1, 16), 0.5);
-}
-
-TEST(utility_test, phi) {
-  EXPECT_DOUBLE_EQ(utility::phi(500), 1.0);
-  EXPECT_DOUBLE_EQ(utility::phi(50), 1.0);
-  EXPECT_DOUBLE_EQ(utility::phi(5), 0.9933071490757153);
-  EXPECT_DOUBLE_EQ(utility::phi(0), 0.5);
-  EXPECT_DOUBLE_EQ(utility::phi(-5), 0.006692850924284855);
-  EXPECT_DOUBLE_EQ(utility::phi(-50), 1.928749847963918e-22);
-  EXPECT_DOUBLE_EQ(utility::phi(-500), 7.124576406741285e-218);
 }
 
 TEST(utility_test, softmax) {
@@ -306,64 +195,6 @@ TEST(utility_test, selrnd) {
   Eigen::VectorXd test = Eigen::VectorXd::Ones(1000);
   for (int i = 0; i < 10000; i++) {
     utility::selrnd(test);
-  }
-}
-
-TEST(utility_test, calculate_marginal_vector_simple) {
-  Eigen::VectorXd vec0(5);
-  vec0 << 1, 2, 3, 4, 5;
-  Eigen::VectorXd vec1(5);
-  vec1 << 6, 7, 8, 9, 10;
-  Eigen::VectorXd vec2(5);
-  vec2 << 11, 12, 13, 14, 15;
-  Eigen::SparseMatrix<double> ensemble_density =
-      kroneckerProduct(vec2.sparseView(),
-                       kroneckerProduct(vec1.sparseView(), vec0.sparseView()));
-  Eigen::VectorXi vec3(3);
-  vec3 << 5, 5, 5;
-  Eigen::VectorXd sol0 =
-      utility::calculate_marginal_vector(ensemble_density, vec3, 0);
-  Eigen::VectorXd sol1 =
-      utility::calculate_marginal_vector(ensemble_density, vec3, 1);
-  Eigen::VectorXd sol2 =
-      utility::calculate_marginal_vector(ensemble_density, vec3, 2);
-  Eigen::VectorXd res0(5);
-  res0 << 2600, 5200, 7800, 10400, 13000;
-  Eigen::VectorXd res1(5);
-  res1 << 5850, 6825, 7800, 8775, 9750;
-  Eigen::VectorXd res2(5);
-  res2 << 6600, 7200, 7800, 8400, 9000;
-
-  EXPECT_EQ(sol0, res0);
-  EXPECT_EQ(sol1, res1);
-  EXPECT_EQ(sol2, res2);
-}
-
-TEST(utility_test, calculate_marginal_vector_recovery) {
-  Eigen::VectorXd vec0(4);
-  vec0 << 0.3, 0.25, 0.15, 0.3;
-  Eigen::VectorXd vec1(5);
-  vec1 << 0.2, 0.1, 0.25, 0.15, 0.3;
-  Eigen::VectorXd vec2(3);
-  vec2 << 0.2, 0.2, 0.6;
-  Eigen::MatrixXd ensemble_density =
-      kroneckerProduct(vec2, kroneckerProduct(vec1, vec0));
-  Eigen::VectorXi vec3(3);
-  vec3 << 4, 5, 3;
-  Eigen::VectorXd sol0 =
-      utility::calculate_marginal_vector(ensemble_density, vec3, 0);
-  Eigen::VectorXd sol1 =
-      utility::calculate_marginal_vector(ensemble_density, vec3, 1);
-  Eigen::VectorXd sol2 =
-      utility::calculate_marginal_vector(ensemble_density, vec3, 2);
-  for (int i = 0; i < 4; i++) {
-    EXPECT_DOUBLE_EQ(sol0(i), vec0(i));
-  }
-  for (int i = 0; i < 5; i++) {
-    EXPECT_DOUBLE_EQ(sol1(i), vec1(i));
-  }
-  for (int i = 0; i < 3; i++) {
-    EXPECT_DOUBLE_EQ(sol2(i), vec2(i));
   }
 }
 

@@ -22,16 +22,31 @@
  */
 class dynamic_model {
  public:
-
+  /**
+   * @brief Store intermediate posterior expectation and covariance values to
+   * files.
+   */
+  int intermediate_outputs_to_file = 0;
+  /**
+   * @brief filename for storing intermediate posterior expectations
+   */
+  std::string intermediate_expectations_filename = "param_expecations.csv";
+  /**
+   * @brief filename for storing intermediate posterior covariances
+   */
+  std::string intermediate_covariances_filename = "param_covariances.csv";
   double converge_crit = 1e-1;
   /**
    * @brief Maximum number of EM steps attempted in inversion
    */
   int max_invert_it = 128;
   /**
-   * @brief Vector of posterior parameter expectations
+   * @brief The number of EM steps performed by inversion
    */
   int performed_it = 0;
+  /**
+   * @brief Vector of posterior parameter expectations
+   */
   Eigen::VectorXd conditional_parameter_expectations;
   /**
    * @brief Matrix of posterior parameter covariances
@@ -113,7 +128,7 @@ class dynamic_model {
    * Wrapper for the forward_model_function. Must create a wrapped
    * fuction that takes a vector and returns a vector.
    */
-  virtual std::function<Eigen::VectorXd(Eigen::VectorXd)>
+  virtual std::function<Eigen::VectorXd(const Eigen::VectorXd&)>
   get_forward_model_function();
   /**
    * Forward model function for the Dynamic Causal Model. Takes a vector
@@ -124,5 +139,31 @@ class dynamic_model {
   /**
    * Empty constructor for the dynamic_model class
    */
+  /**
+   * Calculate the numerical derivative of a function. Function must be
+   * parameterised by a single vector, and return a single vector.
+   */
+
+  template <typename Derived0, typename T0 = typename Derived0::Scalar,
+            typename Derived1, typename T1 = typename Derived1::Scalar>
+  Derived1 diff(
+      std::function<Derived0(const Derived0&)>
+          func,
+      Eigen::MatrixBase<Derived0>& vars, Eigen::MatrixBase<Derived1>& transform) {
+    Derived0 base = func(vars);
+    Derived1 out_matrix = Derived1::Zero(base.size(), vars.size());
+    T0 dx = exp(-8.0);
+  #pragma omp parallel
+    {
+  #pragma omp for schedule(static)
+      for (int i = 0; i < vars.size(); i++) {
+        Derived0 vars_tmp = vars + (transform.col(i) * dx);
+        Derived0 modified = func(vars_tmp);
+        out_matrix.col(i) = (modified - base) / dx;
+      }
+    }
+    return out_matrix;
+  }
+
   dynamic_model();
 };

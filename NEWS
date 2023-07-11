@@ -2,7 +2,7 @@ Embecosm DCM (dcEmb) v0.1.0 release
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [V0.3.0] - 22/11/11
+## [V0.3.0] - 22-11-11
 - Bugfixes in BMR model
 - Bugfixes in PEB model 
 - Significantly updated documentation with worked example
