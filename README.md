@@ -23,6 +23,9 @@ See the online manual [here](https://embecosm.github.io/dcEmb_docs/).
 The codebase is briefly undergoing a substantial set of changes. These
 instructions may be out of date
 
+## Python
+A recent version update has added a Python integration to dcEmb. This feature is
+currently experimental.
 
 # Changelog
 A log of changes made to the code can be found in markdown format in the NEWS

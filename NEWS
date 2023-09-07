@@ -2,6 +2,12 @@ Embecosm DCM (dcEmb) v0.1.0 release
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [V0.4.0] - 23-09-7
+- dcEmb is now distributed as a .deb package
+- Seperated examples into seperate repo
+- Added Python integration
+- A range of incremental updates to documentation
+
 ## [V0.3.0] - 22-11-11
 - Bugfixes in BMR model
 - Bugfixes in PEB model 

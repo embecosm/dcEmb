@@ -11,6 +11,8 @@ cmake_minimum_required(VERSION 3.16)
 
 project(dcEmb LANGUAGES CXX VERSION 1.0.1 DESCRIPTION "dcEmb, fast Dynamic Causal Modeling")
 
+option(BUILD_PYTHON_BINDINGS "Build Python bindings using cython" ON)
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 include(UseSphinxDoc)
@@ -136,3 +138,17 @@ SET(CPACK_PACKAGE_VERSION_MINOR "0")
 SET(CPACK_PACKAGE_VERSION_PATCH "1")
 
 INCLUDE(CPack)
+
+# Python bindings
+if(BUILD_PYTHON_BINDINGS)
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
+  add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/python.stamp
+    COMMAND ${Python3_EXECUTABLE} setup.py build_ext
+    COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/python.stamp
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/python
+    COMMENT "Building Python bindings to 'dcEmb' library"
+  )
+  add_custom_target(dcEmb-python-bindings ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/python.stamp)
+endif()
