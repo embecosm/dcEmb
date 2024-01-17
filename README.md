@@ -20,8 +20,10 @@ To build sphinx documentation:
 # Getting Started
 See the online manual [here](https://embecosm.github.io/dcEmb_docs/).
 
-The codebase is briefly undergoing a substantial set of changes. These
-instructions may be out of date
+See a set of worked examples [here](https://github.com/embecosm/dcEmb-examples)
+
+The codebase is undergoing a substantial set of changes. Some parts of the
+online manual may be out of date
 
 ## Python
 A recent version update has added a Python integration to dcEmb. This feature is
