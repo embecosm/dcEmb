@@ -73,6 +73,14 @@ double utility::logdet(const Eigen::MatrixXd& mat) {
   }
 }
 
+double utility::logdet(const utility::DiagM& mat) {
+  double tol = 1e-16;
+  const auto eig_values = mat.diagonal();
+  const auto pos_eig_values = eig_values.unaryExpr(
+      [tol](double x) { return ((x > tol) && (x < 1 / tol)) ? log(x) : 0.0; });
+  return pos_eig_values.sum();
+}
+
 /**
  * Calculate a runge-kutta step for a given function
  */
@@ -234,6 +242,21 @@ Eigen::MatrixXd utility::inverse_tol(const Eigen::MatrixXd& mat,
     ret_mat = ret_mat.inverse().eval();
   }
   return ret_mat;
+}
+
+utility::DiagM utility::inverse_tol(const utility::DiagM& mat, const double tol) {
+  utility::DiagM ret_mat(mat.cols());
+  ret_mat.diagonal() =
+      mat.diagonal().unaryExpr([tol](double x) { return (1 / (x + tol)); });
+  return ret_mat;
+}
+
+utility::DiagM utility::inverse_tol(const utility::DiagM& mat) {
+  const auto norm = mat.diagonal().template lpNorm<Eigen::Infinity>();
+  const auto tol =
+      std::max(std::numeric_limits<double>::epsilon() * norm * mat.cols(),
+               static_cast<double>(exp(-32)));
+  return utility::inverse_tol(mat, tol);
 }
 
 /*

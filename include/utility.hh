@@ -23,7 +23,12 @@
 #pragma once
 
 namespace utility {
+
+using DiagM = Eigen::DiagonalMatrix<double, Eigen::Dynamic>;
+
 double logdet(const Eigen::MatrixXd& mat);
+double logdet(const DiagM& mat);
+
 Eigen::VectorXd dx(const Eigen::MatrixXd& dfdx, const Eigen::VectorXd& f,
                    const double& t_in);
 Eigen::VectorXd rungekutta(std::function<Eigen::VectorXd(Eigen::VectorXd)> func,
@@ -70,6 +75,8 @@ std::vector<Eigen::MatrixXd> reduced_log_evidence(
     const Eigen::MatrixXd& reduced_parameter_covariances);
 Eigen::MatrixXd inverse_tol(const Eigen::MatrixXd& mat);
 Eigen::MatrixXd inverse_tol(const Eigen::MatrixXd& mat, const double& tol);
+DiagM inverse_tol(const DiagM& mat);
+DiagM inverse_tol(const DiagM& mat, const double tol);
 double phi(const double& x);
 double sigma(const double& x, const double& thresh, const double& sens);
 double sigma(const double& x, const double& thresh);
