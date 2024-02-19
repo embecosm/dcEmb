@@ -18,8 +18,9 @@
 #include <random>
 #include <vector>
 #include "utility.hh"
-#define SparseMD Eigen::SparseMatrix<double>
-#define SparseVD Eigen::SparseVector<double>
+
+using DiagM = Eigen::DiagonalMatrix<double, Eigen::Dynamic>;
+
 #define TICK start = std::chrono::high_resolution_clock::now();
 #define TOCK                                                                 \
   {                                                                          \
@@ -49,12 +50,13 @@ void dynamic_model::invert_model() {
   }
   Eigen::MatrixXd initial_state = Eigen::MatrixXd::Zero(1, 1);
   int dt = 1;
-  std::vector<SparseMD> precision_comp(num_response_vars);
+  std::vector<DiagM> precision_comp(num_response_vars);
   int num_precision_comp = num_response_vars;
   for (int i = 0; i < num_response_vars; i++) {
-    SparseMD prec(num_response_total, num_response_total);
+    DiagM prec(num_response_total);
+    prec.setZero();
     for (int j = i * num_samples; j < i * num_samples + num_samples; j++) {
-      prec.coeffRef(j, j) = 1;
+      prec.diagonal()[j] = 1;
     }
     precision_comp[i] = prec;
   }
@@ -116,34 +118,31 @@ void dynamic_model::invert_model() {
     Eigen::VectorXd hyper_error;
     // J == -dfdp with no confounds present
     Eigen::MatrixXd J = -dfdp;
-    Eigen::MatrixXd i_cov_comp;
+    DiagM i_cov_comp(num_response_total);
     Eigen::MatrixXd conditional_p_cov;
     Eigen::MatrixXd conditional_h_cov;
     for (int k = 0; k < 8; k++) {
-      i_cov_comp =
-          Eigen::MatrixXd::Zero(num_response_total, num_response_total);
+      i_cov_comp.setZero();
       for (int l = 0; l < num_precision_comp; l++) {
-        i_cov_comp =
-            i_cov_comp + (precision_comp[l] * (exp(-32) + exp(h_estimate(l))));
+        i_cov_comp.diagonal() +=
+              (precision_comp[l].diagonal() * (exp(-32) + exp(h_estimate(l))));
       }
       Eigen::MatrixXd cov_comp = utility::inverse_tol(i_cov_comp);
       Eigen::MatrixXd i_conditional_p_cov =
           (J.transpose() * i_cov_comp * J) + inv_prior_p_c;
       conditional_p_cov = utility::inverse_tol(i_conditional_p_cov);
 
-      std::vector<SparseMD> P_mstep_op(num_response_vars);
-      std::vector<SparseMD> PS_mstep_op(num_response_vars);
-      std::vector<SparseMD> JPJ_mstep_op(num_response_vars);
+      std::vector<DiagM> P_mstep_op(num_response_vars);
+      std::vector<DiagM> PS_mstep_op(num_response_vars);
+      std::vector<Eigen::MatrixXd> JPJ_mstep_op(num_response_vars);
 
-      SparseMD cov_comp_sparse = cov_comp.sparseView();
-      SparseMD J_sparse = J.sparseView();
       for (int l = 0; l < num_response_vars; l++) {
-        SparseMD P = (precision_comp[l] * exp(h_estimate(l))).eval();
-        SparseMD PS = P * cov_comp_sparse;
-        SparseMD JPJ = J_sparse.transpose() * P * J_sparse;
-        P_mstep_op[l] = P;
-        PS_mstep_op[l] = PS;
-        JPJ_mstep_op[l] = JPJ;
+          DiagM P(num_response_total);
+          P.diagonal() = precision_comp[l].diagonal() * exp(h_estimate(l));
+          P_mstep_op[l] = P;
+          PS_mstep_op[l].diagonal() =
+              P.diagonal().cwiseProduct(cov_comp.diagonal());
+          JPJ_mstep_op[l] = J.transpose() * P * J;
       }
 
       Eigen::VectorXd dFdh = Eigen::VectorXd::Zero(num_response_vars);
@@ -153,11 +152,14 @@ void dynamic_model::invert_model() {
         Eigen::MatrixXd ePe =
             (prediction_error.transpose() * P_mstep_op[l] * prediction_error) /
             2;
-        dFdh(l) = (PS_mstep_op[l]).toDense().trace() / 2 - ePe.value() -
+        dFdh(l) = PS_mstep_op[l].diagonal().sum() / 2 - ePe.value() -
                   (conditional_p_cov * JPJ_mstep_op[l]).trace() / 2;
         for (int m = 0; m < num_response_vars; m++) {
-          dFdhh(l, m) =
-              -utility::SparseProductTrace(PS_mstep_op[l], PS_mstep_op[m]) / 2;
+          dFdhh(l, m) = -(PS_mstep_op[l]
+                                .diagonal()
+                                .cwiseProduct(PS_mstep_op[m].diagonal())
+                                .sum()) /
+                          2;
           dFdhh(m, l) = dFdhh(l, m);
         }
       }
