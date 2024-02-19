@@ -12,7 +12,6 @@
  */
 
 #include "utility.hh"
-#include <omp.h>
 #include <bitset>
 #include <functional>
 #include <iostream>
@@ -84,6 +83,143 @@ Eigen::VectorXd utility::rungekutta(
   Eigen::VectorXd k3 = func(vars + (h * k2 / 2));
   Eigen::VectorXd k4 = func(vars + (h * k3));
   return h / 6 * (k1 + 2 * k2 + 2 * k3 + k4);
+}
+
+/*
+ * Given an n-dimensional matrix represented in block matrix format, calcuate
+ * the result of permuting these n-dimensions.
+ */
+SparseMD utility::permute_kron_matrix(const SparseMD& matrix,
+                                      const Eigen::VectorXi& new_order,
+                                      const Eigen::VectorXi& cur_order_size) {
+  // Permute the order of elements in a kronecker matrix. Each value on each
+  // axis in  the kronecker matrix represents a position in new_order.size()
+  // dimensions. Calculate this position for the canonical ordering
+  // ([1, ..., new_order.size() -1]), and then recalculate it for the new
+  // ordering (new_order), and apply this to both matrix dimensions.
+  Eigen::VectorXi pos_vector = Eigen::VectorXi::Ones(cur_order_size.size());
+  Eigen::VectorXi pos_vector_new = Eigen::VectorXi::Ones(cur_order_size.size());
+  int size_iterator = 1;
+  int size_iterator_new = 1;
+  Eigen::VectorXi new_order_size = cur_order_size(new_order);
+  // Calculate the values of the vectors converting position to co-ordinates
+  for (int i = 1; i < cur_order_size.size(); i++) {
+    pos_vector(i) = cur_order_size(i - 1) * size_iterator;
+    pos_vector_new(i) = new_order_size(i - 1) * size_iterator_new;
+    size_iterator = pos_vector(i);
+    size_iterator_new = pos_vector_new(i);
+  }
+
+  // Calculate the new positions with the changed dimensions
+  Eigen::VectorXi perm_vector = Eigen::VectorXi(cur_order_size.prod());
+  for (int i = 0; i < cur_order_size.prod(); i++) {
+    Eigen::VectorXi nums = Eigen::VectorXi::Zero(cur_order_size.size());
+    int size_iterator2 = i;
+    for (int j = cur_order_size.size() - 1; j > 0; j--) {
+      nums(j) = size_iterator2 / pos_vector(j);
+      size_iterator2 = size_iterator2 % pos_vector(j);
+    }
+    nums(0) = size_iterator2;
+
+    perm_vector(i) = nums(new_order).transpose() * pos_vector_new;
+  }
+
+  // Reorder the elements in the matrix
+  // NB: Test carefully any changes to this.
+  SparseMD matrix2(matrix.rows(), matrix.cols());
+  // Since we are only permuting transition matricies, we have a pretty good
+  // idea of how populated they are, reserve in advance to improve performance
+  matrix2.reserve(Eigen::VectorXi::Constant(matrix.cols(), 3));
+
+  for (int i = 0; i < matrix.outerSize(); i++) {
+    for (SparseMD::InnerIterator it(matrix, i); it; ++it) {
+      matrix2.insert(perm_vector(it.row()), perm_vector(it.col())) = it.value();
+    }
+  }
+
+  return matrix2;
+}
+
+SparseMD utility::calc_permuted_kron_identity_product(
+    const int& id_size, const SparseMD& matrix,
+    const Eigen::VectorXi& new_order, const Eigen::VectorXi& cur_order_size) {
+  Eigen::VectorXi pos_vector = Eigen::VectorXi::Ones(cur_order_size.size());
+  Eigen::VectorXi pos_vector_new = Eigen::VectorXi::Ones(cur_order_size.size());
+  int size_iterator = 1;
+  int size_iterator_new = 1;
+  Eigen::VectorXi new_order_size = cur_order_size(new_order);
+  // Calculate the values of the vectors converting position to co-ordinates
+  for (int i = 1; i < cur_order_size.size(); i++) {
+    pos_vector(i) = cur_order_size(i - 1) * size_iterator;
+    pos_vector_new(i) = new_order_size(i - 1) * size_iterator_new;
+    size_iterator = pos_vector(i);
+    size_iterator_new = pos_vector_new(i);
+  }
+
+  // Calculate the new positions with the changed dimensions
+  Eigen::VectorXi perm_vector = Eigen::VectorXi(cur_order_size.prod());
+  for (int i = 0; i < cur_order_size.prod(); i++) {
+    Eigen::VectorXi nums = Eigen::VectorXi::Zero(cur_order_size.size());
+    int size_iterator2 = i;
+    for (int j = cur_order_size.size() - 1; j > 0; j--) {
+      nums(j) = size_iterator2 / pos_vector(j);
+      size_iterator2 = size_iterator2 % pos_vector(j);
+    }
+    nums(0) = size_iterator2;
+
+    perm_vector(i) = nums(new_order).transpose() * pos_vector_new;
+  }
+
+  // Reorder the elements in the matrix
+  // NB: Test carefully any changes to this.
+  SparseMD out(cur_order_size.prod(), cur_order_size.prod());
+  // Since we are only permuting transition matricies, we have a pretty good
+  // idea of how populated they are, reserve in advance to improve performance
+  out.reserve(Eigen::VectorXi::Constant(cur_order_size.prod(), 3));
+
+  for (int i = 0; i < id_size; i++) {
+    for (int j = 0; j < matrix.outerSize(); j++) {
+      for (SparseMD::InnerIterator it(matrix, j); it; ++it) {
+        out.insert(perm_vector(i * matrix.rows() + it.row()),
+                   perm_vector(i * matrix.cols() + it.col())) = it.value();
+      }
+    }
+  }
+  // out.makeCompressed();
+  return out;
+}
+
+/*
+ * Given a block vector corresponding to an ensemble density, calculate the
+ * marginal for the given index
+ */
+Eigen::VectorXd utility::calculate_marginal_vector(
+    const Eigen::VectorXd& ensemble_density, const Eigen::VectorXi& size_order,
+    const int& index) {
+  Eigen::VectorXd out_vector = Eigen::VectorXd::Zero(size_order(index));
+  int sz_big = size_order(Eigen::seq(0, index)).prod();
+  int sz_small = sz_big / size_order(index);
+
+  for (int i = 0; i < ensemble_density.size(); i++) {
+    out_vector((i % sz_big) / sz_small) += ensemble_density(i);
+  }
+  return out_vector;
+}
+Eigen::MatrixXd utility::calculate_marginal_vector(
+    const Eigen::VectorXd& ensemble_density, const Eigen::VectorXi& size_order,
+    const int& index1, const int& index2) {
+  Eigen::MatrixXd out_matrix =
+      Eigen::MatrixXd::Zero(size_order(index1), size_order(index2));
+  int sz_big1 = size_order(Eigen::seq(0, index1)).prod();
+  int sz_small1 = sz_big1 / size_order(index1);
+  int sz_big2 = size_order(Eigen::seq(0, index2)).prod();
+  int sz_small2 = sz_big2 / size_order(index2);
+
+  for (int i = 0; i < ensemble_density.size(); i++) {
+    out_matrix((i % sz_big1) / sz_small1, (i % sz_big2) / sz_small2) +=
+        ensemble_density(i);
+  }
+  return out_matrix;
 }
 
 /*
@@ -237,6 +373,21 @@ Eigen::MatrixXd utility::inverse_tol(const Eigen::MatrixXd& mat,
 }
 
 /*
+ * Phi function
+ */
+double utility::phi(const double& x) { return 1.0 / (1.0 + exp(-x)); }
+/*
+ * Sigma function
+ */
+double utility::sigma(const double& x, const double& thresh,
+                      const double& sens) {
+  return utility::phi(sens * (thresh - x) / thresh);
+}
+double utility::sigma(const double& x, const double& thresh) {
+  return utility::sigma(x, thresh, 4.0);
+}
+
+/*
  * Calculate the trace for a Sparse matrix
  */
 double utility::SparseTrace(const SparseMD& A) {
@@ -270,4 +421,3 @@ double utility::SparseProductTrace(const SparseMD& in1, const SparseMD& in2) {
   }
   return trace;
 }
-

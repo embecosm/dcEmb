@@ -11,133 +11,118 @@ cmake_minimum_required(VERSION 3.16)
 
 project(dcEmb LANGUAGES CXX VERSION 1.0.1 DESCRIPTION "dcEmb, fast Dynamic Causal Modeling")
 
+include(GNUInstallDirs)
+include(CheckCXXCompilerFlag)
+
+# Options
 option(BUILD_PYTHON_BINDINGS "Build Python bindings using cython" ON)
+option(BUILD_DOCS "Build docs using Sphinx and Doxygen" ON)
+option(BUILD_TESTS "Build tests using googletest" ON)
+option(STATIC_BUILD "Build a static library" OFF)
+option(USE_OPENMP "Build with OpenMP for Eigen parallelisation" ON)
+option(OPTIMIZE_FASTMATH_NATIVE "Build with -march=native and -ffast-math" ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
-include(UseSphinxDoc)
-include(FindSphinx)
-
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}-std=c++14 -O3 -ffast-math -fno-unsafe-math-optimizations -flto -march=native\
- -D_GLIBCXX_PARALLEL")
-SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}-O3")
-SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}-O3")
-
+# Basic CMake setup
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 
+if(OPTIMIZE_FASTMATH_NATIVE)
+  set(FAST_MATH_FLAGS -ffast-math -fno-unsafe-math-optimizations)
+  CHECK_CXX_COMPILER_FLAG("${FAST_MATH_FLAGS}" COMPILER_SUPPORTS_FAST_MATH)
+  CHECK_CXX_COMPILER_FLAG(-march=native COMPILER_SUPPORTS_MARCH_NATIVE)
 
-find_package(OpenMP)
-find_package(GTest REQUIRED)
+  if (COMPILER_SUPPORTS_FAST_MATH)
+    add_compile_options(${FAST_MATH_FLAGS})
+  endif()
+
+  if (COMPILER_SUPPORTS_MARCH_NATIVE)
+    add_compile_options(-march=native)
+  endif()
+endif()
+
+# Configure for OpenMP
+if(USE_OPENMP)
+  find_package(OpenMP)
+  if(OpenMP_FOUND)
+    link_libraries(OpenMP::OpenMP_CXX)
+    add_compile_definitions(_GLIBCXX_PARALLEL)
+  endif()
+endif()
+
 find_package(Eigen3 3.4 REQUIRED)
-
-# add_subdirectory(${CMAKE_SOURCE_DIR}/lib/googletest)
-# add_subdirectory(${CMAKE_SOURCE_DIR}/lib/eigen)
-enable_testing()
 
 include_directories(
   ${CMAKE_SOURCE_DIR}/include
   ${CMAKE_SOURCE_DIR}/include/3body
   ${CMAKE_SOURCE_DIR}/include/tests
-  # ${EIGEN3_INCLUDE_DIRS}
   ${gtest_SOURCE_DIR}
   ${gtest_SOURCE_DIR}/include
 )
 
+# Library sources
 set(SOURCES_DCM
   src/dynamic_model.cc
   src/utility.cc
 )
 
+# Test sources
 set(SOURCES_TESTS
   tests/utility_test.cc
   src/3body/dynamic_3body_model.cc
   tests/dynamic_3body_model_test.cc
 )
 
-# look for Doxygen package
-find_package(Doxygen)
+# Library config
+if(STATIC_BUILD)
+  add_library(dcEmb STATIC ${SOURCES_DCM})
+else()
+  add_library(dcEmb SHARED ${SOURCES_DCM})
+endif()
 
-if(DOXYGEN_FOUND)
-  # set input and output files
-  set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/docs/source/doxygen/Doxyfile.in)
-  set(DOXYGEN_OUT ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile.out)
-  message(${DOXYGEN_IN})
-
-  # request to configure the file
-  configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
-  message("Doxygen build started")
-
-  # Note: do not put "ALL" - this builds docs together with application EVERY TIME!
-  add_custom_target(doxy
-    COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    COMMENT "Generating API documentation with Doxygen"
-    VERBATIM)
-else(DOXYGEN_FOUND)
-  message("Doxygen need to be installed to generate the doxygen documentation")
-endif(DOXYGEN_FOUND)
-
-add_sphinx_doc(
-  SOURCE_DIR
-  ${CMAKE_CURRENT_SOURCE_DIR}/docs/source/sphinx/source
-  BUILD_DIR
-  ${CMAKE_CURRENT_SOURCE_DIR}/docs/
-  CACHE_DIR
-  ${CMAKE_CURRENT_SOURCE_DIR}/docs/.doctrees
-  HTML_DIR
-  ${CMAKE_CURRENT_SOURCE_DIR}/docs/
-  CONF_FILE
-  ${CMAKE_CURRENT_SOURCE_DIR}/docs/source/sphinx/source/conf.py
-  TARGET_NAME
-  sphinx
-  COMMENT
-  "HTML documentation"
+target_link_libraries(dcEmb PUBLIC Eigen3::Eigen)
+target_include_directories(dcEmb
+  PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
-
-# Documentation
-add_custom_target(docs)
-add_dependencies(docs doxy sphinx)
-
-# Add dcm as library
-add_library(dcEmb SHARED
-  src/dynamic_model.cc
-  src/utility.cc
-)
-target_link_libraries(dcEmb PUBLIC OpenMP::OpenMP_CXX Eigen3::Eigen)
-
 set_target_properties(dcEmb PROPERTIES
   VERSION ${PROJECT_VERSION}
   SOVERSION 1
-  PUBLIC_HEADER
-  "include/dynamic_model.hh;include/bma_model.hh;include/bmr_model.hh;include/peb_model.hh"
 )
 
-# Run short form tests
-add_executable(run_tests ${SOURCES_TESTS})
+# Tests config
+if(BUILD_TESTS)
+  find_package(GTest REQUIRED)
+  enable_testing()
 
-if(OpenMP_FOUND)
-  target_link_libraries(run_tests PUBLIC OpenMP::OpenMP_CXX)
-endif(OpenMP_FOUND)
+  # Run short form tests
+  add_executable(run_tests ${SOURCES_TESTS})
 
-target_link_libraries(run_tests PUBLIC gtest gtest_main dcEmb Eigen3::Eigen)
-set_target_properties(run_tests PROPERTIES COMPILE_FLAGS "")
+  # OpenMP is already added earlier if enabled
+  target_link_libraries(run_tests PUBLIC gtest gtest_main dcEmb Eigen3::Eigen)
+endif()
 
-install(TARGETS dcEmb
+# Installation config
+install(TARGETS dcEmb EXPORT dcEmb
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-configure_file(dcEmb.pc.in dcEmb.pc @ONLY)
-install(FILES ${CMAKE_BINARY_DIR}/dcEmb.pc DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/pkgconfig)
+install(FILES
+  include/dynamic_model.hh
+  include/bma_model.hh
+  include/bmr_model.hh
+  include/peb_model.hh
+  include/utility.hh
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dcEmb
+)
 
-SET(CPACK_GENERATOR "DEB")
-SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Embecosm") # required
-SET(CPACK_PACKAGE_VERSION_MAJOR "0")
-SET(CPACK_PACKAGE_VERSION_MINOR "0")
-SET(CPACK_PACKAGE_VERSION_PATCH "1")
-
-INCLUDE(CPack)
+install(EXPORT dcEmb
+  DESTINATION cmake
+  FILE dcEmbConfig.cmake
+)
 
 # Python bindings
 if(BUILD_PYTHON_BINDINGS)
@@ -152,3 +137,60 @@ if(BUILD_PYTHON_BINDINGS)
   )
   add_custom_target(dcEmb-python-bindings ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/python.stamp)
 endif()
+
+if(BUILD_DOCS)
+  # look for Doxygen package
+  find_package(Doxygen)
+
+  if (DOXYGEN_FOUND)
+    # set input and output files
+    set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/docs/source/doxygen/Doxyfile.in)
+    set(DOXYGEN_OUT ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile.out)
+    message(${DOXYGEN_IN})
+
+    # request to configure the file
+    configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
+    message("Doxygen build started")
+
+    # Note: do not put "ALL" - this builds docs together with application EVERY TIME!
+    add_custom_target(doxy
+      COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+      COMMENT "Generating API documentation with Doxygen"
+      VERBATIM)
+  else()
+    message("Doxygen need to be installed to generate the doxygen documentation")
+  endif()
+
+  include(UseSphinxDoc)
+  include(FindSphinx)
+
+  add_sphinx_doc(
+    SOURCE_DIR
+    ${CMAKE_CURRENT_SOURCE_DIR}/docs/source/sphinx/source
+    BUILD_DIR
+    ${CMAKE_CURRENT_SOURCE_DIR}/docs/
+    CACHE_DIR
+    ${CMAKE_CURRENT_SOURCE_DIR}/docs/.doctrees
+    HTML_DIR
+    ${CMAKE_CURRENT_SOURCE_DIR}/docs/
+    CONF_FILE
+    ${CMAKE_CURRENT_SOURCE_DIR}/docs/source/sphinx/source/conf.py
+    TARGET_NAME
+    sphinx
+    COMMENT
+    "HTML documentation"
+  )
+
+  # Documentation
+  add_custom_target(docs)
+  add_dependencies(docs doxy sphinx)
+endif()
+
+SET(CPACK_GENERATOR "DEB")
+SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Embecosm") # required
+SET(CPACK_PACKAGE_VERSION_MAJOR "0")
+SET(CPACK_PACKAGE_VERSION_MINOR "0")
+SET(CPACK_PACKAGE_VERSION_PATCH "1")
+
+INCLUDE(CPack)

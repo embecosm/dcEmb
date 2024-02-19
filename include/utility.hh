@@ -214,7 +214,5 @@ Derived gradient(const Derived& vec) {
 
 double SparseTrace(const SparseMD& A);
 double SparseProductTrace(const SparseMD& A, const SparseMD& B);
-void splitstr(std::vector<std::string>& vec, const std::string& str,
-              const char& delim);
 
 }  // namespace utility
