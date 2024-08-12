@@ -14,7 +14,7 @@
 #include "utility.hh"
 #include <gtest/gtest.h>
 #include <stdio.h>
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 #include <functional>
 #include <iostream>
 #include <unsupported/Eigen/KroneckerProduct>

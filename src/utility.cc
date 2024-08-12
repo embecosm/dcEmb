@@ -16,8 +16,8 @@
 #include <functional>
 #include <iostream>
 #include <sstream>
-#include <unsupported/Eigen/MatrixFunctions>
-#include "Eigen/Core"
+#include <eigen3/unsupported/Eigen/MatrixFunctions>
+#include <eigen3/Eigen/Core>
 
 #define SparseMD Eigen::SparseMatrix<double>
 #define SparseVD Eigen::SparseVector<double>

@@ -1,6 +1,7 @@
 from distutils.core import setup
 from distutils.extension import Extension
 from Cython.Build import cythonize
+import numpy
 
 ext_modules = [
     Extension(
@@ -10,7 +11,7 @@ ext_modules = [
         "../src/dynamic_model.cc",
         "../src/utility.cc"
     ],
-    include_dirs = ['/usr/local/include/eigen3', '../include', 'cpp/'],
+    include_dirs = ['/usr/local/include/eigen3', '../include', 'cpp/', numpy.get_include()],
     language="c++",
     ),
 ]

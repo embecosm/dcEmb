@@ -14,7 +14,7 @@
 #include "dynamic_3body_model.hh"
 #include <gtest/gtest.h>
 #include <stdio.h>
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 #include <fstream>
 #include <iostream>
 #include "bmr_model.hh"

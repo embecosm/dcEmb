@@ -11,8 +11,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include <Eigen/Dense>
-#include <Eigen/Sparse>
+#include <eigen3/Eigen/Dense>
+#include <eigen3/Eigen/Sparse>
 #include <fstream>
 #include <functional>
 #include <iostream>

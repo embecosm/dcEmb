@@ -218,9 +218,9 @@ should have each of the following blocks of content in it:
     #include "dynamic_3body_model.hh"
     #include "utility.hh"
 
-    #include "Eigen/Core"
-    #include "Eigen/Dense"
-    #include "Eigen/SVD"
+    #include <eigen3/Eigen/Core>
+    #include <eigen3/Eigen/Dense>
+    #include <eigen3/Eigen/SVD>
 
     #include <chrono>
     #include <fstream>
@@ -453,7 +453,7 @@ order to keep the code tidy. In this example, we call this
 
 .. code-block:: cpp
 
-    #include "Eigen/Dense"
+    #include <eigen3/Eigen/Dense>
     #include "parameter_location_3body.hh"
     #pragma once
 

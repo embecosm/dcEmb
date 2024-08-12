@@ -14,9 +14,9 @@
 #include "dynamic_python_model.hh"
 #include "utility.hh"
 
-#include "Eigen/Core"
-#include "Eigen/Dense"
-#include "Eigen/SVD"
+#include <eigen3/Eigen/Core>
+#include <eigen3/Eigen/Dense>
+#include <eigen3/Eigen/SVD>
 
 #include <numpy/arrayobject.h>
 

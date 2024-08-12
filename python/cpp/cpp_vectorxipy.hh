@@ -1,6 +1,6 @@
 #ifndef VECTORXiPY_H
 #define VECTORXiPY_H
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 using namespace Eigen;
 #pragma once
 
