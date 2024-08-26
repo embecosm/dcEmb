@@ -1,6 +1,6 @@
 #ifndef VECTORXdPY_H
 #define VECTORXdPY_H
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 #include <iostream>
 
 using namespace Eigen;

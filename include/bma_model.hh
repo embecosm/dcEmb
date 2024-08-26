@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 #include "utility.hh"
 
 #pragma once

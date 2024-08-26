@@ -13,6 +13,14 @@ Dependencies
 - C++ 14 compatible compiler
 - Git
 
+The following packages:
+- Cython3
+- Eigen3 library
+- GTest library
+- Numpy
+- Sphinx
+- Sphinx breathe (Doxygen integration)
+
 Platforms
 ###########
 
@@ -25,7 +33,7 @@ Linux
 
 3. Create and navigate into a build directory (mkdir build && cd build)
 
-4. Run CMake (cmake .. && cmake \-\-build)
+4. Run CMake (cmake .. && cmake \-\-build .)
 
 5. Run the executable of your choice (e.g, ./dcm_3body)
 
@@ -37,7 +45,7 @@ Mac
 
 3. Create and navigate into a build directory (mkdir build && cd build)
 
-4. Run CMake (cmake .. && cmake \-\-build)
+4. Run CMake (cmake .. && cmake \-\-build .)
 
 5. Run the executable of your choice (e.g, ./dcm_3body)
 
